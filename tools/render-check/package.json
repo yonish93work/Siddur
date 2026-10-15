@@ -1,0 +1,14 @@
+{
+  "name": "siddur-render-check",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Checks that the viewer (PDF.js) draws every siddur page the same as independent renderers (MuPDF, PDFium)",
+  "type": "module",
+  "scripts": {
+    "check": "node render-pdfjs.mjs && node render-refs.mjs && node compare.mjs && node selftest.mjs && node report.mjs"
+  },
+  "dependencies": {
+    "@hyzyla/pdfium": "3.0.0",
+    "mupdf": "1.28.1"
+  }
+}

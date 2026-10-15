@@ -1,0 +1,43 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>PDF.js render (for the checker)</title>
+<!-- Opened by render-pdfjs.mjs in headless Chrome. Draws pages with exactly the same PDF.js
+     version and options as viewer.js, and sends each picture back to the local server. -->
+<canvas id="c"></canvas>
+<script type="module">
+import * as pdfjsLib from '../../node_modules/pdfjs-dist/build/pdf.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = '../../node_modules/pdfjs-dist/build/pdf.worker.min.mjs';
+
+const q = new URLSearchParams(location.search);
+const SCALE = Number(q.get('scale'));
+const FROM = Number(q.get('from')), TO = Number(q.get('to'));
+const root = new URL('../../', location.href);
+
+const log = msg => fetch('/log', { method: 'POST', body: msg });
+try {
+  // Same options as viewer.js.
+  const pdf = await pdfjsLib.getDocument({
+    url: new URL('source/siddur.pdf', root).href,
+    disableFontFace: true,
+    standardFontDataUrl: new URL('node_modules/pdfjs-dist/standard_fonts/', root).href,
+    cMapUrl: new URL('node_modules/pdfjs-dist/cmaps/', root).href,
+    cMapPacked: true,
+  }).promise;
+  const canvas = document.getElementById('c');
+  const last = Math.min(TO, pdf.numPages);
+  for (let n = FROM; n <= last; n++) {
+    const page = await pdf.getPage(n);
+    const viewport = page.getViewport({ scale: SCALE });
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    await fetch(`/save?page=${n}`, { method: 'POST', body: blob });
+    page.cleanup();
+  }
+  await fetch('/done', { method: 'POST', body: String(pdf.numPages) });
+} catch (e) {
+  await log('ERROR ' + (e?.stack || e));
+  await fetch('/done', { method: 'POST', body: 'error' });
+}
+</script>
