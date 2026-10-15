@@ -1,0 +1,7 @@
+# Installed automatically by "npm install" - not our code
+node_modules/
+
+# Installers and a stray copy of the PDF in the project root (the real one is source/siddur.pdf)
+*.exe
+*.msi
+/siddur.pdf
