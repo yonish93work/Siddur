@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 export const PROJECT = fileURLToPath(new URL('../../', import.meta.url));
 export const PDF_PATH = join(PROJECT, 'source', 'siddur.pdf');
-export const PDF_SHA256 = '43060c858c31297ed5e95bb97d693e471eacda1aa999b33e02d2a50a6e40f7a0';
+export const PDF_SHA256 = '7db00a1cfd9848991cccb43e665d073cba5d60d266ba8b15c5e6988ddedb8a6c';
 
 // 3 = 216 dots per inch: an A4 page becomes 1785 x 2526 pixels, so even a single nikud dot is several pixels.
 export const SCALE = 3;

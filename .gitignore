@@ -5,3 +5,7 @@ node_modules/
 *.exe
 *.msi
 /siddur.pdf
+
+# Files as received from Oren (the app uses source/siddur.pdf), and generated output
+/New Siddur/
+/dist/

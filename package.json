@@ -5,9 +5,11 @@
   "description": "Siddur Tefillat Shlomo viewer",
   "type": "module",
   "scripts": {
-    "start": "node serve.mjs"
+    "start": "node serve.mjs",
+    "pages": "node tools/build-pages.mjs"
   },
   "dependencies": {
+    "@hebcal/core": "6.16.1",
     "pdfjs-dist": "4.10.38"
   }
 }
