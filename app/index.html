@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>סידור תפילת שלמה</title>
+  <meta name="description" content="סידור תפילת שלמה, נוסח תימן שאמי, לפי היום בלוח העברי">
+  <meta name="theme-color" content="#20364a">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="update" class="update" hidden>
+    <span>יש עדכון לאפליקציה</span><button id="update-btn" type="button">לחץ לרענון</button>
+  </div>
+
+  <main id="home" class="screen"></main>
+  <main id="browse" class="screen" hidden></main>
+  <main id="settings" class="screen" hidden></main>
+
+  <section id="reader" hidden>
+    <header class="rbar">
+      <button type="button" id="r-back" class="icon" aria-label="חזרה">→</button>
+      <div class="rtitle"><b id="r-title"></b><span id="r-where"></span></div>
+      <button type="button" id="r-menu" class="icon" aria-label="קטעים ותזכורות">☰</button>
+    </header>
+    <div id="r-panel" class="rpanel" hidden></div>
+    <div id="r-pages" class="rpages" tabindex="-1"></div>
+  </section>
+
+  <nav id="nav" class="nav">
+    <button type="button" data-go="home">תפילה</button>
+    <button type="button" data-go="browse">תוכן העניינים</button>
+    <button type="button" data-go="settings">הגדרות</button>
+  </nav>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

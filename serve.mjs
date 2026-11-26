@@ -1,11 +1,11 @@
-// Tiny local web server for development: serves this folder at http://localhost:8080
+// Tiny local web server for development: serves the built app (dist/) at http://localhost:8080
 // Run: node serve.mjs
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = fileURLToPath(new URL('.', import.meta.url));
+const ROOT = fileURLToPath(new URL('./dist/', import.meta.url));
 const PORT = Number(process.env.PORT) || 8080;
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -16,6 +16,7 @@ const TYPES = {
   '.pdf': 'application/pdf',
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
 };
 
 createServer(async (req, res) => {
@@ -30,4 +31,4 @@ createServer(async (req, res) => {
   } catch {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('Not found');
   }
-}).listen(PORT, '127.0.0.1', () => console.log(`Siddur viewer: http://localhost:${PORT}`));
+}).listen(PORT, '127.0.0.1', () => console.log(`Siddur app: http://localhost:${PORT}`));

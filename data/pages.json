@@ -5187,9 +5187,9 @@
   },
   {
    "pdf": 619,
-   "printed": null,
-   "label": null,
-   "header": "שער",
+   "printed": 575,
+   "label": "575",
+   "header": "זבד הבת",
    "check": false,
    "notes": [
     "checked by eye"

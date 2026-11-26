@@ -52,7 +52,7 @@ for (let n = 1; n <= doc.numPages; n++) {
 const OVERRIDES = {
   400: ['387', 'מגילת אסתר'],       // no number printed; the table of contents says 387
   565: ['526', 'מנחה לתשעה באב'],  // no number printed; the table of contents says 526
-  619: [null, 'שער'],              // unnumbered page before פדיון הבן
+  619: ['575', 'זבד הבת'],         // no number printed; the table of contents says 575
   692: ['660', 'פרקי אבות ו'],     // decorated header, prints 660
   704: [null, 'משלי'], 728: [null, 'קריאות התורה'], 770: [null, 'שער התוספות'],  // divider pages without a number
 };

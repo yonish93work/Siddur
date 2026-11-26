@@ -5,11 +5,17 @@
   "description": "Siddur Tefillat Shlomo viewer",
   "type": "module",
   "scripts": {
-    "start": "node serve.mjs",
-    "pages": "node tools/build-pages.mjs"
+    "start": "node tools/build.mjs && node serve.mjs",
+    "pages": "node tools/build-pages.mjs",
+    "test": "node --test test/*.test.mjs",
+    "crops": "node tools/build-crops.mjs",
+    "build": "node tools/build.mjs"
   },
   "dependencies": {
     "@hebcal/core": "6.16.1",
     "pdfjs-dist": "4.10.38"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
   }
 }
