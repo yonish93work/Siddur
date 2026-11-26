@@ -9,3 +9,4 @@ node_modules/
 # Files as received from Oren (the app uses source/siddur.pdf), and generated output
 /New Siddur/
 /dist/
+/design-assets/
