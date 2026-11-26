@@ -42,12 +42,15 @@ h1 { font-size: 1.6rem; margin: 0; line-height: 1.2; font-weight: 700; }
 .sub { color: var(--muted); margin: 2px 0 0; }
 
 /* Section headings with a small gold bead on each side. */
-.sec { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 28px 4px 12px; font-size: 1.2rem; font-weight: 700; color: var(--brand); }
-.sec::before, .sec::after { content: ""; flex: 1; height: 2px; border-radius: 2px; background: linear-gradient(to left, transparent, var(--gold2)); }
-.sec::after { background: linear-gradient(to right, transparent, var(--gold2)); }
+.sec { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 30px 8px 14px; font-size: 1.22rem; font-weight: 700; color: var(--brand); }
+.sec::before, .sec::after { content: ""; flex: 1; max-width: 120px; height: 10px; border-radius: 99px;
+  background: radial-gradient(circle, var(--gold) 0 3.5px, transparent 4px) right center / 10px 10px no-repeat,
+              linear-gradient(var(--gold2), var(--gold2)) center / 100% 2px no-repeat; opacity: .85; }
+.sec::after { background: radial-gradient(circle, var(--gold) 0 3.5px, transparent 4px) left center / 10px 10px no-repeat,
+              linear-gradient(var(--gold2), var(--gold2)) center / 100% 2px no-repeat; }
 @media (prefers-color-scheme: dark) { .sec { color: var(--gold2); } }
 
-.card { background: linear-gradient(180deg, var(--card), var(--card2)); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; box-shadow: var(--shadow); }
+.card { background: linear-gradient(180deg, var(--card), var(--card2)); border: 1px solid rgba(192, 138, 40, .2); border-radius: 26px; padding: 18px 20px; box-shadow: var(--shadow); }
 .card + .card { margin-top: 12px; }
 
 /* The night-blue band at the top of each screen: old Yemenite handwriting, a soft round bottom edged in gold. */
@@ -76,15 +79,16 @@ h1 { font-size: 1.6rem; margin: 0; line-height: 1.2; font-weight: 700; }
 .now { display: flex; align-items: center; gap: 14px; width: 100%; border: 0; border-radius: 28px; background: var(--night); color: var(--brand-ink); padding: 16px 18px; text-align: start; box-shadow: var(--shadow-deep); position: relative; overflow: hidden; border: 2px solid var(--gold2); }
 .now .big { font-size: 1.85rem; font-weight: 700; line-height: 1.15; color: var(--goldtext); }
 .now .medal { width: 68px; height: 68px; }
-.now .go { margin-inline-start: auto; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 1.5rem; color: #2b1d0e; background: linear-gradient(180deg, #fbe3a0, #c9932c); }
+.now .go { margin-inline-start: auto; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; color: #2b1d0e; background: radial-gradient(circle at 40% 35%, #fff1c4, #e2b453 55%, #a87522); box-shadow: 0 0 0 3px rgba(251, 227, 160, .35), 0 4px 10px rgba(0, 0, 0, .35); flex: none; }
+.now .go svg { width: 24px; height: 24px; }
 
-.resume { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 18px; background: linear-gradient(180deg, var(--card), var(--card2)); border: 2px dashed var(--gold); border-radius: var(--r); padding: 12px 16px; text-align: start; box-shadow: var(--shadow); }
+.resume { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 18px; background: linear-gradient(180deg, #fffaf0, var(--card2)); border: 2px solid rgba(192, 138, 40, .45); border-radius: 28px; padding: 12px 16px; text-align: start; box-shadow: var(--shadow); }
 .resume .medal { width: 46px; height: 46px; }
 .resume .medal svg { width: 22px; height: 22px; }
 .resume small { display: block; color: var(--muted); }
 
 .prayers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.prayer { display: flex; flex-direction: column; align-items: center; gap: 2px; background: linear-gradient(180deg, var(--card), var(--card2)); border: 1px solid var(--line); border-radius: 26px; padding: 12px 6px 10px; min-height: 124px; box-shadow: var(--shadow); }
+.prayer { display: flex; flex-direction: column; align-items: center; gap: 2px; background: linear-gradient(180deg, var(--card), var(--card2)); border: 1px solid rgba(192, 138, 40, .2); border-radius: 30px; padding: 14px 6px 12px; min-height: 124px; box-shadow: var(--shadow); }
 .prayer .medal { width: 56px; height: 56px; margin-bottom: 2px; }
 .prayer b { font-size: 1.28rem; color: var(--brand); }
 .prayer small { color: var(--muted); font-size: .78rem; line-height: 1.25; text-align: center; }
@@ -93,7 +97,7 @@ h1 { font-size: 1.6rem; margin: 0; line-height: 1.2; font-weight: 700; }
 @media (prefers-color-scheme: dark) { .prayer b { color: var(--gold2); } }
 
 .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.tile { display: flex; align-items: center; gap: 8px; background: linear-gradient(180deg, var(--card), var(--card2)); border: 1px solid var(--line); border-radius: 24px; padding: 10px 12px; min-height: 80px; text-align: start; box-shadow: var(--shadow); }
+.tile { display: flex; align-items: center; gap: 8px; background: linear-gradient(180deg, var(--card), var(--card2)); border: 1px solid rgba(192, 138, 40, .2); border-radius: 28px; padding: 10px 12px; min-height: 82px; text-align: start; box-shadow: var(--shadow); }
 .tile > span:last-child { min-width: 0; }
 .tile .medal { width: 48px; height: 48px; }
 .tile .medal svg { width: 23px; height: 23px; }
@@ -111,12 +115,13 @@ h1 { font-size: 1.6rem; margin: 0; line-height: 1.2; font-weight: 700; }
 .special.on { border-color: var(--gold); background: var(--note); }
 .special select, .set select { padding: 10px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--soft); max-width: 50%; }
 
-.timesbtn { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 12px; background: linear-gradient(180deg, var(--card), var(--card2)); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 14px; text-align: start; box-shadow: var(--shadow); }
+.timesbtn { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 12px; background: linear-gradient(180deg, var(--card), var(--card2)); border: 1px solid rgba(192, 138, 40, .2); border-radius: 28px; padding: 10px 14px; text-align: start; box-shadow: var(--shadow); }
 .timesbtn .medal { width: 48px; height: 48px; }
 .timesbtn .medal svg { width: 23px; height: 23px; }
 .timesbtn b { font-family: var(--serif); font-size: 1.12rem; color: var(--brand); display: block; }
 .timesbtn small { color: var(--muted); }
-.timesbtn .chev { margin-inline-start: auto; color: var(--gold); font-size: 1.3rem; transition: transform .2s; }
+.timesbtn .chev { margin-inline-start: auto; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #a87522; background: rgba(192, 138, 40, .12); transition: transform .2s; }
+.timesbtn .chev svg { width: 18px; height: 18px; }
 .timesbtn[aria-expanded=true] .chev { transform: rotate(-90deg); }
 @media (prefers-color-scheme: dark) { .timesbtn b { color: var(--gold2); } }
 
@@ -131,17 +136,17 @@ h1 { font-size: 1.6rem; margin: 0; line-height: 1.2; font-weight: 700; }
 @media (prefers-color-scheme: dark) { .btn { color: var(--ink); } }
 
 .list { list-style: none; margin: 0; padding: 0; }
-.list li + li { border-top: 1px solid var(--line); }
+.list li + li { border-top: 1px solid rgba(192, 138, 40, .16); }
 .list.card { padding: 2px 18px; }
 .plain { padding: 10px 0; display: flex; gap: 10px; justify-content: space-between; align-items: baseline; }
 .item { width: 100%; background: none; border: 0; padding: 12px 0; display: flex; gap: 12px; align-items: center; text-align: start; min-height: 48px; }
-.item::after { content: "‹"; color: var(--gold); font-size: 1.3rem; line-height: 1; }
+.item::after { content: ""; flex: none; width: 26px; height: 26px; border-radius: 50%; background: rgba(192, 138, 40, .12) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a87522' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 7l-5 5 5 5'/%3E%3C/svg%3E") center / 16px no-repeat; }
 .item span:first-child { flex: 1; }
 .jumps li.sub .item { padding: 8px 0; min-height: 40px; padding-inline-start: 18px; font-size: .95rem; color: var(--muted); }
 .jumps li.sub .item span:first-child::before { content: "• "; color: var(--gold); }
 .jumps > li:not(.sub) .item span:first-child { font-weight: 700; }
 .pg { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; font-size: .92rem; }
-.say { border-inline-start: 4px solid var(--note-line); padding-inline-start: 10px; border-radius: 2px; }
+.say { border-inline-start: 4px solid var(--note-line); padding-inline-start: 10px; border-radius: 4px; }
 .times .plain span:last-child { font-weight: 700; font-variant-numeric: tabular-nums; }
 .where { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
 .link { background: none; border: 0; color: var(--brand2); text-decoration: underline; padding: 6px 0; min-height: 36px; }
@@ -156,7 +161,7 @@ details.card[open] > summary { margin-bottom: 6px; }
 .err { color: #b3261e; min-height: 1.4em; margin: 6px 0 0; }
 .draft { font-size: .86rem; color: var(--muted); margin-top: 22px; text-align: center; }
 .set { display: flex; justify-content: space-between; gap: 14px; align-items: center; padding: 12px 0; }
-.set + .set { border-top: 1px solid var(--line); }
+.set + .set { border-top: 1px solid rgba(192, 138, 40, .16); }
 .set small { display: block; color: var(--muted); }
 .set input[type=checkbox] { appearance: none; -webkit-appearance: none; flex: none; width: 50px; height: 30px; border-radius: 99px; background: #cbbd9f; position: relative; cursor: pointer; transition: background .2s; }
 .set input[type=checkbox]::after { content: ""; position: absolute; top: 3px; right: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .3); transition: right .2s; }
@@ -170,7 +175,7 @@ details.card[open] > summary { margin-bottom: 6px; }
 .mnav { background: rgba(255, 255, 255, .08); color: var(--goldtext); border: 1px solid rgba(236, 201, 112, .6); border-radius: 50%; width: 46px; height: 46px; font-size: 1.2rem; }
 .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 16px; }
 .wd { text-align: center; font-size: .82rem; color: var(--brand); padding: 2px 0; font-weight: 700; font-family: var(--serif); }
-.cell { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 12px; min-height: 66px; padding: 4px 3px 4px; text-align: start; display: flex; flex-direction: column; gap: 2px; overflow: hidden; box-shadow: 0 1px 2px rgba(60, 35, 5, .06); }
+.cell { position: relative; background: var(--card); border: 1px solid rgba(192, 138, 40, .18); border-radius: 14px; min-height: 66px; padding: 4px 3px 4px; text-align: start; display: flex; flex-direction: column; gap: 2px; overflow: hidden; box-shadow: 0 1px 2px rgba(60, 35, 5, .06); }
 .cell .hd { font-weight: 700; font-size: 1.05rem; line-height: 1.1; padding-inline-start: 2px; }
 .cell .gd { position: absolute; top: 4px; left: 5px; font-size: .7rem; color: var(--muted); }
 /* Each kind of day gets its own colour: the square is tinted and the name sits on a coloured tag. */

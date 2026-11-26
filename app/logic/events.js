@@ -30,7 +30,9 @@ export function eventsBetween(first, last, { il = true, walled = false, place } 
     if ((f & flags.MODERN_HOLIDAY) && (f & flags.IL_ONLY)) continue;
     if (/Selichot|LaBehemot/.test(e.getDesc())) continue;
     const text = e.render('he-x-NoNikud').replace(/^חנוכה: (.+)$/, 'חנוכה, $1').replace(/ \d{4}$/, '');
-    day(e.getDate().abs()).events.push({ text, kind: /\d:\d\d/.test(text) ? 'time' : kindOf(f) });
+    // All the days of Pesach, Sukkot and Chanukah count as a holiday in the calendar (red).
+    const festive = /חוה״מ|הושענא רבה|^חנוכה/.test(text) || (f & flags.CHANUKAH_CANDLES);
+    day(e.getDate().abs()).events.push({ text, kind: /\d:\d\d/.test(text) ? 'time' : festive ? 'holiday' : kindOf(f) });
   }
   for (let a = new HDate(first).abs(); a <= new HDate(last).abs(); a++) {
     const d = day(a), info = dayInfo(new HDate(a), { il, walled });

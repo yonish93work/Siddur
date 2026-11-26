@@ -138,7 +138,7 @@ async function show(i, dir, focus) {
 function fit(list) {
   const host = $('r-pages');
   const W = host.clientWidth - 8, H = host.clientHeight - 8;
-  const ratios = list.map(e => { const c = state.crops[e.n - 1]; return (c[2] - c[0]) / (c[3] - c[1]); });
+  const ratios = list.map(e => { const c = cropOf(e.n); return (c[2] - c[0]) / (c[3] - c[1]); });
   const totalRatio = ratios.reduce((a, b) => a + b, 0);
   const h = Math.min(H, W / totalRatio) * state.zoom;
   return ratios.map(r => ({ w: Math.floor(h * r), h: Math.floor(h) }));
@@ -146,7 +146,7 @@ function fit(list) {
 
 async function drawPage(e, size) {
   const s = state;
-  const key = `${e.n}:${size.w}:${e.first ? 1 : 0}`;
+  const key = `${e.n}:${size.w}:${e.first ? 1 : 0}:${s.margins ? 1 : 0}`;
   if (s.cache.has(key)) {
     const job = s.cache.get(key);
     s.cache.delete(key); s.cache.set(key, job); // most recently used goes last
@@ -155,7 +155,7 @@ async function drawPage(e, size) {
   const job = (async () => {
     const pdf = await loadPdf();
     const page = await pdf.getPage(e.n);
-    const [l, t, r, b] = s.crops[e.n - 1];
+    const [l, t, r, b] = cropOf(e.n);
     // Sharper than the screen, so zooming in with two fingers stays readable; capped to spare memory.
     const px = Math.min(size.w * Math.min(devicePixelRatio || 1, 3) * (s.zoom > 1 ? 1 : 1.25), 2600);
     const scale = px / (r - l);
@@ -228,6 +228,16 @@ function copyCanvas(from, to) {
 function place(leaf, like) {
   const r = like.getBoundingClientRect(), h = $('r-pages').getBoundingClientRect();
   Object.assign(leaf.style, { position: 'absolute', left: `${r.left - h.left}px`, top: `${r.top - h.top}px`, width: `${r.width}px`, height: `${r.height}px`, margin: 0 });
+}
+
+// The part of the page shown. Without side notes (the default) every page gets the same frame, so the text stays
+// the same size from page to page; the frame grows only where a page prints beyond it.
+const FRAME = [0, 16, 0, 812];
+function cropOf(n) {
+  const c = state.crops[n - 1];
+  if (state.margins) return c;
+  // Sideways: exactly the text column (so no side note peeks in). Up and down: the same frame on every page.
+  return [c[4], Math.min(FRAME[1], c[1]), c[5], Math.max(FRAME[3], c[3])];
 }
 
 const label = e => state.idx.label(e.n) ?? `דף ${e.n}`;

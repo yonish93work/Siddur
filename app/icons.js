@@ -18,7 +18,8 @@ export const ICONS = {
   omer: svg('<path d="M12 21V8M12 8c-1-2-1-4 0-5 1 1 1 3 0 5zM12 12c-2-1-3.5-3-3.5-5 2 .5 3.5 2.5 3.5 5zM12 12c2-1 3.5-3 3.5-5-2 .5-3.5 2.5-3.5 5zM12 16c-2-1-3.5-3-3.5-5 2 .5 3.5 2.5 3.5 5zM12 16c2-1 3.5-3 3.5-5-2 .5-3.5 2.5-3.5 5z"/>'),
   bed: svg('<path d="M3 18V8M3 14h18v4M21 18v-4a3 3 0 0 0-3-3h-8v3"/><circle cx="6.5" cy="11.5" r="1.5"/>'),
   share: svg('<circle cx="18" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18.5" r="2.5"/><path d="M8.3 10.8l7.4-4M8.3 13.2l7.4 4"/>'),
-  back: svg('<path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 0 12"/>'),
+  back: svg('<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>'),
   compass: svg('<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5 13.4 13.4 8.5 15.5l2.1-4.9z"/><circle cx="12" cy="12" r=".8" fill="currentColor"/>'),
+  chevron: svg('<path d="M14.5 6 8.5 12l6 6" stroke-width="2.4"/>'),
   clock: svg('<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>'),
 };

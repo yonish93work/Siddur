@@ -21,7 +21,7 @@ const SCREENS = ['home', 'calendar', 'browse', 'settings'];
 
 // ---- settings, kept on the phone only
 // special = { date: 'YYYY-MM-DD', kind: 'avel' | 'chatan' | 'brit' }: a one-day change to the prayers (p. 68).
-const DEFAULTS = { il: true, walled: false, adjacent: false, place: null, night: false, special: null, installHidden: false, keepAwake: true, quiet: false };
+const DEFAULTS = { il: true, walled: false, adjacent: false, place: null, night: false, special: null, installHidden: false, keepAwake: true, quiet: false, margins: false };
 const SPECIAL = { avel: 'בית האבל', chatan: 'חתן בבית הכנסת', brit: 'ברית מילה' };
 const settings = { ...DEFAULTS };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('settings') ?? '{}')); } catch { /* storage blocked: defaults */ }
@@ -45,6 +45,8 @@ const weekdayName = d => (d.getDay() === 6 ? 'שבת' : `יום ${WEEKDAY[d.getD
 const time = d => (d && !Number.isNaN(d.getTime()) ? new Intl.DateTimeFormat('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: place().tz }).format(d) : '—');
 const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const gregText = d => d.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' });
+// The round gold arrow on the "now" button.
+const goArrow = () => { const s = el('span', { className: 'go', ariaHidden: 'true' }); s.innerHTML = ICONS.chevron; return s; };
 // A drawn icon inside a round gold-edged medallion.
 const medal = key => { const s = el('span', { className: 'medal' }); s.innerHTML = ICONS[key] ?? ''; return s; };
 
@@ -98,7 +100,7 @@ function show(plan, startAt, resume) {
   for (const s of SCREENS) $(s).hidden = true;
   $('nav').hidden = true;
   openReader(plan, {
-    idx, crops, startAt, onError: showError, night: settings.night, keepAwake: settings.keepAwake,
+    idx, crops, startAt, onError: showError, night: settings.night, keepAwake: settings.keepAwake, margins: settings.margins,
     toast: settings.quiet && resume?.kind === 'prayer' ? '🔕 כדאי להעביר את הטלפון למצב שקט' : '',
     onNight: on => { settings.night = on; save(); },
     onMove: n => saveResume({ ...resume, n, label: idx.label(n), at: Date.now() }),
@@ -180,7 +182,7 @@ let timesOpen = false;
 function timesButton(date) {
   const box = el('div', { hidden: !timesOpen, style: 'margin-top:10px' }, timesCard(date));
   const b = el('button', { type: 'button', className: 'timesbtn', onclick: () => { timesOpen = !timesOpen; box.hidden = !timesOpen; b.setAttribute('aria-expanded', String(timesOpen)); } },
-    medal('clock'), el('span', {}, el('b', { textContent: 'זמני היום' }), el('small', { textContent: `${place().name} · זריחה, שקיעה ועוד` })), el('span', { className: 'chev', textContent: '‹' }));
+    medal('clock'), el('span', {}, el('b', { textContent: 'זמני היום' }), el('small', { textContent: `${place().name} · זריחה, שקיעה ועוד` })), Object.assign(el('span', { className: 'chev' }), { innerHTML: ICONS.chevron }));
   b.setAttribute('aria-expanded', String(timesOpen));
   return el('div', {}, b, box);
 }
@@ -200,7 +202,7 @@ function renderHome() {
     nowBox = el('button', { type: 'button', className: 'now', onclick: () => openPrayer(current, dates[current]) },
       medal(current),
       el('span', {}, el('span', { textContent: 'התפילה עכשיו' }), el('div', { className: 'big', textContent: PRAYERS[current].name }), el('span', { textContent: `${current === 'arvit' ? 'ליל ' : ''}${heb(d)}` })),
-      el('span', { className: 'go', textContent: '‹', ariaHidden: 'true' }));
+      goArrow());
   }
 
   const sayPrayer = current && !holyNow ? current : ['shacharit', 'mincha', 'arvit'].find(x => !holyName(x, dates[x]));
@@ -556,7 +558,8 @@ function renderSettings() {
     sec('בזמן התפילה'),
     el('div', { className: 'card' },
       check('keepAwake', 'מסך פעיל', 'המסך לא נכבה ולא ננעל כל עוד הסידור פתוח, כדי שלא יכבה באמצע התפילה'),
-      check('quiet', 'תזכורת למצב שקט', 'בפתיחת תפילה תופיע תזכורת להעביר את הטלפון למצב שקט. אפליקציה שמותקנת מהדפדפן לא יכולה להשתיק את הטלפון בעצמה, ולכן זו תזכורת')),
+      check('quiet', 'תזכורת למצב שקט', 'בפתיחת תפילה תופיע תזכורת להעביר את הטלפון למצב שקט'),
+      check('margins', 'הערות בשולי הדף', 'מקורות ופירושי מילים שמודפסים בצדי העמוד. כשכבוי, העמוד ממלא את המסך')),
     sec('מנהג'),
     el('div', { className: 'card' },
       check('walled', 'עיר מוקפת חומה', 'פורים בט"ו (ירושלים)'),
