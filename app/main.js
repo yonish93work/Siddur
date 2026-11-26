@@ -4,6 +4,7 @@ import { HDate } from '@hebcal/core';
 import { dayInfo } from './logic/calendar.js';
 import { PRAYERS, reminders, dayTitles } from './logic/prayers.js';
 import { HIGHLIGHTS } from './logic/highlights.js';
+import { ANCHORS } from './logic/anchors.js';
 import { pageIndex } from './logic/pages.js';
 import { buildMenu } from './logic/sections.js';
 import { eventsBetween } from './logic/events.js';
@@ -18,7 +19,9 @@ const menu = buildMenu(idx);
 const SCREENS = ['home', 'calendar', 'browse', 'settings'];
 
 // ---- settings, kept on the phone only
-const DEFAULTS = { il: true, walled: false, adjacent: false, place: null };
+// special = { date: 'YYYY-MM-DD', kind: 'avel' | 'chatan' | 'brit' }: a one-day change to the prayers (p. 68).
+const DEFAULTS = { il: true, walled: false, adjacent: false, place: null, night: false, special: null, installHidden: false };
+const SPECIAL = { avel: 'בית האבל', chatan: 'חתן בבית הכנסת', brit: 'ברית מילה' };
 const settings = { ...DEFAULTS };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('settings') ?? '{}')); } catch { /* storage blocked: defaults */ }
 const save = () => { try { localStorage.setItem('settings', JSON.stringify(settings)); } catch { /* storage blocked */ } };
@@ -44,37 +47,79 @@ const gregText = d => d.toLocaleDateString('he-IL', { day: 'numeric', month: 'lo
 const ICON = { shacharit: '🌅', mincha: '☀️', arvit: '🌙' };
 
 // ---- opening a prayer or a section
+// The day's facts, plus a mourner / groom / circumcision chosen for that date (no Tachanun, p. 68).
+function infoFor(prayer, civil) {
+  const info = dayInfo(prayerDate(prayer, civil), opts());
+  const sp = settings.special;
+  if (!sp || sp.date !== iso(civil) || prayer === 'arvit' || info.holy) return info;
+  const reason = SPECIAL[sp.kind];
+  return { ...info, noTachanun: info.noTachanun ?? reason, noTachanunMincha: info.noTachanunMincha ?? reason, avel: sp.kind === 'avel' };
+}
+
 function prayerPlan(prayer, civil) {
-  const d = prayerDate(prayer, civil), info = dayInfo(d, opts());
+  const d = prayerDate(prayer, civil), info = infoFor(prayer, civil);
   const segments = PRAYERS[prayer].build(info, { adjacent: settings.adjacent })
     .map(s => ({ ...s, pages: idx.range(s.from, s.to) })).filter(s => s.pages.length);
-  const notes = new Map(), marks = new Map(), general = [];
+  const notes = new Map(), marks = new Map(), skips = new Map(), general = [];
+  const paint = (map, list) => {
+    for (const m of list) {
+      const [page, rects] = HIGHLIGHTS[prayer][m];
+      const p = idx.first(page);
+      map.set(p, [...(map.get(p) ?? []), ...rects]);
+    }
+  };
   for (const r of reminders(prayer, info)) {
     if (!r.page) { general.push(r.text); continue; }
     const n = idx.first(r.page);
     notes.set(n, [...(notes.get(n) ?? []), r.text]);
-    for (const m of r.marks) {
-      const [page, rects] = HIGHLIGHTS[prayer][m];
-      const p = idx.first(page);
-      marks.set(p, [...(marks.get(p) ?? []), ...rects]);
-    }
+    paint(marks, r.marks);
+    paint(skips, r.skips ?? []);
   }
+  const anchors = ANCHORS.map(([l, name]) => [idx.first(l), name]);
   const night = prayer === 'arvit';
   const t = dayTitles(info).filter(x => !x.includes('בעומר') && x !== 'ערב שבת');
-  return { title: `${PRAYERS[prayer].name}${t.length ? ` · ${t[0]}` : ''}`, sub: `${night ? 'ליל ' : ''}${heb(d)}`, segments, notes, marks, general, info };
+  return { title: `${PRAYERS[prayer].name}${t.length ? ` · ${t[0]}` : ''}`, sub: `${night ? 'ליל ' : ''}${heb(d)}`, segments, notes, marks, skips, general, info, anchors };
 }
 
-function show(plan, startAt) {
+// ---- "continue where I stopped": the last place read, kept on the phone for a few hours
+const RESUME_HOURS = 6;
+const saveResume = r => { try { localStorage.setItem('resume', JSON.stringify(r)); } catch { /* storage blocked */ } };
+function loadResume() {
+  try {
+    const r = JSON.parse(localStorage.getItem('resume') ?? 'null');
+    return r && Date.now() - r.at < RESUME_HOURS * 3600e3 ? r : null;
+  } catch { return null; }
+}
+
+function show(plan, startAt, resume) {
   readerOpen = true;
   for (const s of SCREENS) $(s).hidden = true;
   $('nav').hidden = true;
-  openReader(plan, { idx, crops, startAt, onError: showError });
+  openReader(plan, {
+    idx, crops, startAt, onError: showError, night: settings.night,
+    onNight: on => { settings.night = on; save(); },
+    onMove: n => saveResume({ ...resume, n, label: idx.label(n), at: Date.now() }),
+    onReport: w => report(plan, w),
+  });
   if (history.state?.reader !== true) history.pushState({ reader: true }, '');
 }
-const openPrayer = (prayer, civil) => show(prayerPlan(prayer, civil));
+const openPrayer = (prayer, civil, startAt) => show(prayerPlan(prayer, civil), startAt, { kind: 'prayer', prayer, civil: iso(civil), title: PRAYERS[prayer].name });
 const openRange = (title, from, to, startAt) => show({
   title, segments: [{ title, why: '', pages: Array.from({ length: to - from + 1 }, (_, k) => from + k) }],
-}, startAt);
+}, startAt, { kind: 'range', title, from, to });
+function reopen(r) {
+  if (r.kind === 'prayer') { const [y, m, d] = r.civil.split('-').map(Number); openPrayer(r.prayer, new Date(y, m - 1, d, 12), r.n); }
+  else openRange(r.title, r.from, r.to, r.n);
+}
+
+// ---- "report a mistake": a ready message with everything needed to find the place
+async function report(plan, w) {
+  const lines = ['דיווח על טעות בסידור תפילת שלמה', `תפילה: ${plan.title}`, plan.sub ? `תאריך: ${plan.sub}` : '', w ? `מקום: ${w.segment}, עמוד ${w.page}` : '',
+    `גרסה: ${__VERSION__}`, settings.special ? `הגדרה מיוחדת: ${SPECIAL[settings.special.kind]}` : '', '', 'מה לא נכון:'].filter((x, k, a) => x !== '' || a[k - 1] !== '');
+  const text = lines.join('\n');
+  if (navigator.share) { try { await navigator.share({ text }); return; } catch (e) { if (e?.name === 'AbortError') return; } }
+  open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+}
 
 let readerOpen = false, tab = 'home';
 function leaveReader() {
@@ -147,21 +192,68 @@ function renderHome() {
   }
 
   const sayPrayer = current && !holyNow ? current : ['shacharit', 'mincha', 'arvit'].find(x => !holyName(x, dates[x]));
+  const resume = loadResume();
   $('home').replaceChildren(
     el('header', { className: 'hero' },
       el('h1', { textContent: `${weekdayName(hd.greg())}, ${heb(hd)}` }),
       el('p', { className: 'sub', textContent: `${gregText(hd.greg())}${dates.isToday && iso(hd.greg()) !== iso(dates.today) ? ' · היום העברי מתחיל בשקיעה' : ''}` }),
       titles.length ? el('div', { className: 'chips' }, titles.map(t => el('span', { className: 'chip', textContent: t }))) : '',
+      dates.isToday ? countdown() : '',
       el('div', { className: 'daynav' }, btn('→ יום קודם', () => step(-1), ''), chosen ? btn('חזרה להיום', () => { chosen = null; renderHome(); }, '') : '', btn('יום הבא ←', () => step(1), ''))),
+    installCard(),
+    resume ? el('button', { type: 'button', className: 'resume', onclick: () => reopen(resume) },
+      el('span', { textContent: '↩' }), el('span', {}, el('b', { textContent: 'להמשיך מאיפה שעצרתי' }), el('small', { textContent: `${resume.title}${resume.label ? `, עמוד ${resume.label}` : ''}` }))) : '',
     nowBox ? sec(dates.isToday ? 'עכשיו' : '') : '', nowBox,
     sec(dates.isToday ? 'תפילות היום' : `תפילות ל${weekdayName(chosen)}`),
     prayerButtons(dates, current),
-    sayPrayer ? todayCard(sayPrayer, dates[sayPrayer]) : '',
+    specialCard(hd.greg()),
     sec('זמני היום'), timesCard(dates.isToday ? dates.today : chosen),
     sec('קיצורים'), extras(info),
+    sayPrayer ? todayCard(sayPrayer, dates[sayPrayer]) : '',
     sec('שיתוף'), shareCard(),
     el('p', { className: 'draft', textContent: 'גרסת ניסיון: החוקים נכתבו לפי ההוראות שבסידור, ועדיין לא אומתו בידי בקיא במנהג. בכל ספק יש לנהוג לפי הסידור המודפס והרב.' }),
   );
+}
+
+// "In 35 minutes: sunset" - the next of the times people most often watch for.
+function countdown() {
+  const now = Date.now(), p = place(), today = civilDate(new Date(), p.tz);
+  const watch = ['סוף זמן קריאת שמע (גר"א)', 'סוף זמן תפילה (גר"א)', 'חצות היום', 'מנחה גדולה', 'פלג המנחה', 'שקיעה', 'צאת הכוכבים'];
+  const list = [...zmanimList(today, p), ...zmanimList(addDays(today, 1), p).map(([n, t]) => [n, t])]
+    .filter(([n, t]) => (watch.includes(n) || n === 'עלות השחר') && t && t.getTime() > now);
+  const nextOne = list[0];
+  if (!nextOne) return '';
+  const mins = Math.round((nextOne[1].getTime() - now) / 60000);
+  const text = mins < 60 ? `${mins} דקות` : `${Math.floor(mins / 60)} שעות ו-${mins % 60} דקות`;
+  return el('div', { className: 'count' }, el('span', { textContent: '⏳' }), ` ${nextOne[0]} בעוד ${mins === 1 ? 'דקה' : text} (${time(nextOne[1])})`);
+}
+
+// A mourner, a groom or a circumcision today: no Tachanun (p. 68); in a mourner's house also Psalm 49 (p. 98).
+function specialCard(civil) {
+  const sp = settings.special?.date === iso(civil) ? settings.special.kind : '';
+  const sel = el('select', { onchange: e => { settings.special = e.target.value ? { date: iso(civil), kind: e.target.value } : null; save(); renderHome(); } },
+    el('option', { value: '', textContent: 'רגיל' }), ...Object.entries(SPECIAL).map(([k, v]) => el('option', { value: k, textContent: v })));
+  sel.value = sp;
+  sel.setAttribute('aria-label', 'מתפללים היום במקום מיוחד');
+  return el('label', { className: `card special${sp ? ' on' : ''}` },
+    el('span', {}, el('b', { textContent: 'מתפללים היום עם' }), el('small', { textContent: sp ? 'בלי תחנון, לפי עמוד 68. חוזר לרגיל מחר.' : 'חתן, ברית מילה או בית האבל משנים את התפילה' })), sel);
+}
+
+// How to put the app on the home screen, until it is installed (or the user closes this).
+let installEvent = null;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvent = e; if (tab === 'home' && !readerOpen) renderHome(); });
+function installCard() {
+  const installed = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if (installed || settings.installHidden) return '';
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const steps = ios
+    ? ['לפתוח את האתר ב-Safari', 'ללחוץ על כפתור השיתוף (ריבוע עם חץ למעלה) בתחתית המסך', 'לגלול ולבחור "הוספה למסך הבית"', 'ללחוץ "הוסף". הסמל "תפילת שלמה" יופיע במסך הבית']
+    : ['ללחוץ על שלוש הנקודות בפינה של Chrome', 'לבחור "התקנת אפליקציה" או "הוספה למסך הבית"', 'לאשר. הסמל "תפילת שלמה" יופיע במסך הבית'];
+  return el('div', { className: 'card install' },
+    el('div', { className: 'where' }, el('b', { textContent: '📲 להתקין את האפליקציה בטלפון' }), btn('✕', () => { settings.installHidden = true; save(); renderHome(); }, 'link')),
+    installEvent ? el('div', { style: 'margin:8px 0' }, btn('התקן עכשיו', async () => { installEvent.prompt(); await installEvent.userChoice.catch(() => {}); installEvent = null; renderHome(); }, 'btn primary')) : '',
+    el('ol', {}, steps.map(t => el('li', { textContent: t }))),
+    el('p', { className: 'sub', style: 'margin:0;font-size:.85rem', textContent: 'אחרי ההתקנה האפליקציה עובדת גם בלי אינטרנט.' }));
 }
 
 function todayCard(prayer, civil) {
@@ -170,7 +262,7 @@ function todayCard(prayer, civil) {
   return el('div', {}, sec(`מה אומרים ב${PRAYERS[prayer].name}`),
     el('div', { className: 'card' }, el('ul', { className: 'list' }, rows.map(([t, n]) => el('li', { className: 'plain' }, el('span', { className: 'say', textContent: t }),
       n ? el('span', { className: 'pg', textContent: `עמ' ${idx.label(n)}` }) : ''))),
-    el('p', { className: 'sub', style: 'font-size:.82rem;margin-top:8px', textContent: 'בתוך הסידור, מה שאומרים היום מסומן ברקע צהוב.' })));
+    el('p', { className: 'sub', style: 'font-size:.82rem;margin-top:8px', textContent: 'בתוך הסידור: צהוב = אומרים היום, אפור = לא אומרים היום.' })));
 }
 
 function sectionByTitle(part) {
@@ -245,7 +337,8 @@ function renderCalendar() {
         el('button', { type: 'button', className: 'mnav', onclick: () => move(1), ariaLabel: 'החודש הבא', textContent: '←' })),
       el('div', { className: 'daynav' }, btn('היום', () => { calMonth = null; calSel = null; renderCalendar(); }, ''))),
     grid,
-    el('div', { className: 'legend' }, el('span', {}, el('i'), 'יום בלי תחנון (לפי עמוד 68)'), el('span', { textContent: 'אדום: חג · כחול: ראש חודש · סגול: צום' })),
+    el('div', { className: 'legend' }, el('span', {}, el('i'), 'יום בלי תחנון'),
+      el('span', { className: 'holiday', textContent: 'חג' }), el('span', { className: 'rc', textContent: 'ראש חודש' }), el('span', { className: 'fast', textContent: 'צום' })),
     sec('היום שנבחר'), day,
     sec('זמני היום'), timesCard(civil),
   );
@@ -291,11 +384,32 @@ function renderBrowse() {
     err.textContent = '';
     openRange('הסידור', Math.max(1, n - 5), Math.min(idx.pages.length, n + 30), n);
   };
+  // Search: typing a word keeps only the parts whose name has it, and opens their groups.
+  const search = el('input', { type: 'search', className: 'search', placeholder: '🔍 חיפוש, למשל הבדלה', autocomplete: 'off' });
+  search.setAttribute('aria-label', 'חיפוש בתוכן העניינים');
+  const none = el('p', { className: 'sub', hidden: true, textContent: 'לא נמצא. אפשר לנסות מילה אחרת, או לקפוץ למספר עמוד למטה.' });
+  const groups = [...menu].map(([g, list]) => {
+    const d = el('details', { className: 'card' }, el('summary', { textContent: g }), el('ul', { className: 'list' }, list.map(e => { const li = menuItem(e); li.dataset.t = `${g} ${e.title}`; return li; })));
+    return d;
+  });
+  const norm = s => s.replace(/[֑-ׇ"'״׳]/g, '').replace(/\s+/g, ' ').trim();
+  search.oninput = () => {
+    const q = norm(search.value);
+    let found = 0;
+    for (const d of groups) {
+      let shown = 0;
+      for (const li of d.querySelectorAll('li')) { const ok = !q || norm(li.dataset.t).includes(q); li.hidden = !ok; shown += ok; }
+      d.hidden = !shown;
+      d.open = !!q && shown > 0;
+      found += shown;
+    }
+    none.hidden = !q || found > 0;
+  };
   $('browse').replaceChildren(
     el('header', { className: 'hero' }, el('h1', { textContent: 'תוכן העניינים' }), el('p', { className: 'sub', textContent: 'כל חלקי הסידור, לפי הסדר שבעמוד 3' })),
-    sec('קפיצה לעמוד'), el('div', { className: 'card' }, form, err),
-    sec('חלקי הסידור'),
-    ...[...menu].map(([g, list]) => el('details', { className: 'card' }, el('summary', { textContent: g }), el('ul', { className: 'list' }, list.map(menuItem)))));
+    el('div', { className: 'card', style: 'margin-top:16px' }, search), none,
+    sec('חלקי הסידור'), ...groups,
+    sec('קפיצה לעמוד'), el('div', { className: 'card' }, form, err));
 }
 
 // ---- settings

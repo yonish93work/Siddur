@@ -3,12 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>סידור תפילת שלמה</title>
+  <title>תפילת שלמה</title>
   <meta name="description" content="סידור תפילת שלמה, נוסח תימן שאמי, לפי היום בלוח העברי">
-  <meta name="theme-color" content="#20364a">
+  <meta name="theme-color" content="#6e1a24">
+  <!-- The name under the icon on the phone's home screen -->
+  <meta name="application-name" content="תפילת שלמה">
+  <meta name="apple-mobile-web-app-title" content="תפילת שלמה">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preload" href="fonts/frank-ruhl-libre-hebrew-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -25,7 +31,8 @@
     <header class="rbar">
       <button type="button" id="r-back" class="icon" aria-label="חזרה">→</button>
       <div class="rtitle"><b id="r-title"></b><span id="r-where"></span></div>
-      <button type="button" id="r-menu" class="icon" aria-label="קטעים ותזכורות">☰</button>
+      <button type="button" id="r-night" class="icon" aria-label="מצב לילה" aria-pressed="false">☾</button>
+      <button type="button" id="r-menu" class="icon" aria-label="מעבר מהיר ותזכורות">☰</button>
     </header>
     <div id="r-why" class="rwhy" hidden></div>
     <div id="r-notes" class="rnotes" hidden></div>

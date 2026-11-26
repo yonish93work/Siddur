@@ -168,3 +168,13 @@ test('every segment and reminder points at real pages, for 20 years', () => {
     }
   }
 });
+
+test('jump places and painted boxes point at real places', async () => {
+  const { ANCHORS } = await import('../app/logic/anchors.js');
+  const { HIGHLIGHTS } = await import('../app/logic/highlights.js');
+  for (const [l, name] of ANCHORS) assert.ok(idx.first(l), `jump place ${name}: no page ${l}`);
+  for (const [prayer, marks] of Object.entries(HIGHLIGHTS)) for (const [m, [page, rects]] of Object.entries(marks)) {
+    assert.ok(idx.first(page), `${prayer}.${m}: no page ${page}`);
+    for (const [x0, y0, x1, y1] of rects) assert.ok(x0 >= 0 && y0 >= 0 && x1 <= 595 && y1 <= 842 && x1 > x0 && y1 > y0, `${prayer}.${m}: box outside the page`);
+  }
+});

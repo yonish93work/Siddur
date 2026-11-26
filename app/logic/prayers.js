@@ -17,6 +17,7 @@ const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמיש
 // Printed number 93 is on two PDF pages (103, 104), hence the @.
 export function occasionPsalms(i) {
   const out = [];
+  if (i.avel) out.push(seg('מזמור לבית האבל', '98', '98', 'בית האבל'));
   if (i.roshChodesh) out.push(seg('מזמור לראש חודש', '92', '@103', 'ראש חודש'));
   if (i.chanukah) out.push(seg('מזמור לחנוכה', '@103', '@103', 'חנוכה'));
   if (i.fast === 'gedalia' || i.fast === 'tevet') out.push(seg('מזמור לתענית', '@103', '@104', FAST_NAMES[i.fast]));
@@ -215,11 +216,17 @@ const PREP = { roshChodesh: 'ביום ראש החודש הזה', pesach: 'ביו
 // "marks" names the boxes in highlights.js to paint yellow on that page.
 export function reminders(prayer, i) {
   const out = [];
-  const add = (page, text) => out.push({ page: page === null ? null : String(page), text, marks: [] });
-  const mark = (marks, text) => {
-    const list = [marks].flat().filter(m => HIGHLIGHTS[prayer]?.[m]);
+  const add = (page, text) => out.push({ page: page === null ? null : String(page), text, marks: [], skips: [] });
+  const known = m => HIGHLIGHTS[prayer]?.[m];
+  // marks: painted yellow (said today). skips: painted grey (printed next to it, not said today).
+  const mark = (marks, text, skips = []) => {
+    const list = [marks].flat().filter(known);
     if (!list.length) return;
-    out.push({ page: HIGHLIGHTS[prayer][list[0]][0], text, marks: list });
+    out.push({ page: HIGHLIGHTS[prayer][list[0]][0], text, marks: list, skips: [skips].flat().filter(known) });
+  };
+  const skip = (marks, text) => {
+    const list = [marks].flat().filter(known);
+    if (list.length) out.push({ page: HIGHLIGHTS[prayer][list[0]][0], text, marks: [], skips: list });
   };
 
   if (prayer === 'arvit' && i.fast === 'av') {
@@ -239,13 +246,13 @@ export function reminders(prayer, i) {
     if (i.ayt) add('47', 'בקדיש: לעילא לעילא מכל');
   }
 
-  mark(i.geshem ? 'geshem' : 'tal', i.geshem ? 'משיב הרוח ומוריד הגשם (חורף)' : 'מוריד הטל (קיץ)');
+  mark(i.geshem ? 'geshem' : 'tal', i.geshem ? 'משיב הרוח ומוריד הגשם (חורף)' : 'מוריד הטל (קיץ)', i.geshem ? 'tal' : 'geshem');
   if (i.ayt) mark('zochrenu', 'זכרנו לחיים');
   if (i.ayt) mark('michamocha', 'מי כמוך אב הרחמן');
   if (i.ayt) mark('kadosh', 'המלך הקדוש');
   if (prayer === 'arvit' && (i.afterShabbat || i.afterYomTov)) mark('havdala', 'אתה חוננתנו (מוצאי שבת)');
   if (i.fast && prayer !== 'arvit') mark('aneinuChazan', 'ש"ץ: עננו ברכה בפני עצמה (בחזרה)');
-  mark(i.barech ? 'barech' : 'barchenu', i.barech ? 'ברך עלינו (חורף)' : 'ברכנו (קיץ)');
+  mark(i.barech ? 'barech' : 'barchenu', i.barech ? 'ברך עלינו (חורף)' : 'ברכנו (קיץ)', i.barech ? 'barchenu' : 'barech');
   if (i.ayt) mark('mishpat', 'המלך המשפט');
   if (i.fast === 'av') mark('nachem', 'נחם במקום תשכון');
   if (i.fast) mark('aneinu', prayer === 'arvit' ? 'עננו (בלחש), לפי ההוראה בעמוד 143' : 'עננו (בלחש)');
@@ -253,18 +260,20 @@ export function reminders(prayer, i) {
     const what = [i.roshChodesh && PREP.roshChodesh, i.cholHamoed && PREP[i.cholHamoed]].filter(Boolean).join(' / ');
     const noRepeat = prayer === 'arvit' && i.roshChodesh ? ' (שכח בליל ראש חודש: לא חוזר)' : ' (שכח: חוזר)';
     const line = [i.roshChodesh && 'yaaleRoshChodesh', i.cholHamoed === 'pesach' && 'yaalePesach', i.cholHamoed === 'sukkot' && 'yaaleSukkot'].filter(Boolean);
-    mark(['yaale', ...line], `יעלה ויבוא: "${what}"${noRepeat}`);
+    const other = ['yaaleRoshChodesh', 'yaalePesach', 'yaaleSukkot'].filter(x => !line.includes(x));
+    mark(['yaale', ...line], `יעלה ויבוא: "${what}"${noRepeat}`, other);
   }
-  if (i.chanukah) mark('nissimChanukah', 'על הניסים לחנוכה');
-  if (i.purim) mark('nissimPurim', 'על הניסים לפורים');
+  if (i.chanukah) mark('nissimChanukah', 'על הניסים לחנוכה', prayer === 'arvit' ? [] : 'nissimPurimColumn');
+  if (i.purim) mark('nissimPurim', 'על הניסים לפורים', prayer === 'arvit' ? [] : 'nissimChanukahColumn');
   if (i.fast && prayer === 'mincha') mark('kohanim', 'ברכת כהנים לתענית ציבור');
   if (i.ayt) mark('ketov', 'וכתוב לחיים טובים');
   if (i.ayt) mark('sefer', 'ובספר חיים');
 
   if (prayer === 'shacharit') {
     if (i.noTachanun) add(null, `אין תחנון: ${i.noTachanun}`);
-    if (i.noTachanun && !i.roshChodesh && !i.megillah && i.fast !== 'av') add('82', 'מדלגים "יענך" (למנצח): יום שאין בו תחנון');
-    if (i.noTachanun) add('86', 'מדלגים "תפלה לדוד": יום שאין בו תחנון');
+    if (i.noTachanun && !i.roshChodesh && !i.megillah && i.fast !== 'av') skip('yaanecha', 'מדלגים "יענך" (למנצח): יום שאין בו תחנון');
+    if (i.noTachanun) skip('tefilaLeDavid', 'מדלגים "תפלה לדוד": יום שאין בו תחנון');
+    if (i.avel) add('83', 'בבית האבל ש"ץ מתחיל מ"ואתה קדוש"');
     if (i.megillah || (isMonThu(i) && i.noTachanun && !i.roshChodesh && !i.chanukah && !i.cholHamoed && !i.fast)) add('78', 'מתחילים "יהי ה\' אלהינו עמנו"');
     if (i.ori) add('101', 'יש נוהגים: "לדוד ה\' אורי" (עמוד 128)');
     if (i.hoshanaRaba) add(null, 'הושענא רבה: סדר ההושענות אינו מופיע במפת האפליקציה עדיין');

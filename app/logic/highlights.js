@@ -22,6 +22,8 @@ export const HIGHLIGHTS = {
     yaaleRoshChodesh: ['@63', [[90, 555, 510, 588]]], yaalePesach: ['@63', [[90, 585, 510, 617]]], yaaleSukkot: ['@63', [[90, 613, 510, 646]]],
     ...prefix(NISSIM(65, 644, 790)),
     ketov: ['@66', [[140, 136, 456, 161]]], sefer: ['@67', [FULL(274, 295)]],
+    // Skipped on days without Tachanun (pp. 82, 86)
+    yaanecha: ['@92', [FULL(497, 795)]], tefilaLeDavid: ['@96', [FULL(68, 530)]],
   },
   mincha: {
     zochrenu: ['@121', [FULL(280, 307)]], michamocha: ['@121', [FULL(695, 723)]],
@@ -48,5 +50,8 @@ export const HIGHLIGHTS = {
 };
 
 function prefix(o) {
-  return { nissimGeneral: o.general, nissimChanukah: o.chanukah, nissimPurim: o.purim };
+  return {
+    nissimGeneral: o.general, nissimChanukah: o.chanukah, nissimPurim: o.purim,
+    nissimChanukahColumn: [o.chanukah[0], o.chanukah[1].slice(1)], nissimPurimColumn: [o.purim[0], o.purim[1].slice(1)],
+  };
 }
