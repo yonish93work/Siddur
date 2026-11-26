@@ -1,23 +1,24 @@
-/* Look and feel inspired by Yemenite craft: deep burgundy and indigo of the embroidered garments,
-   the gold and silver of filigree work, on a warm parchment background. */
+/* Look and feel in the spirit of Yemenite heritage design: deep night blue with faint manuscript writing,
+   gold frames and ribbons, parchment and cream, round medallions with a scalloped gold edge. */
 @font-face { font-family: "Frank Ruhl Libre"; src: url("fonts/frank-ruhl-libre-hebrew-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Frank Ruhl Libre"; src: url("fonts/frank-ruhl-libre-hebrew-700-normal.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Frank Ruhl Libre"; src: url("fonts/frank-ruhl-libre-hebrew-900-normal.woff2") format("woff2"); font-weight: 900; font-display: swap; }
 
 :root {
-  --bg: #f5eee0; --card: #fffdf8; --ink: #2a1c14; --muted: #6b5a4b; --line: #e3d6bf; --soft: #f8f1e3;
-  --brand: #6e1a24; --brand2: #8c2a33; --indigo: #1f2b4a; --brand-ink: #fff8ea; --gold: #b8892b; --gold2: #d9b45a;
+  --bg: #efe5d2; --card: #fbf6ea; --ink: #2b2015; --muted: #6e5c47; --line: #dccbaa; --soft: #f5ecdb;
+  --brand: #13284a; --brand2: #1f3d6e; --indigo: #0b1a33; --brand-ink: #f8efd9; --gold: #c08a28; --gold2: #e8c46a;
   --note: #fff1bf; --note-line: #d9ac3a; --note-ink: #4a3500;
   --holiday: #a3201a; --rc: #1f4f8a; --fast: #6a3f97; --modern: #1d7a55;
-  --shadow: 0 1px 2px rgba(60, 30, 10, .08), 0 2px 6px rgba(60, 30, 10, .06);
+  --shadow: 0 1px 2px rgba(40, 25, 5, .1), 0 3px 8px rgba(40, 25, 5, .08);
   --serif: "Frank Ruhl Libre", "David", "Times New Roman", serif;
-  --pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='14'%3E%3Cpath d='M0 14 7 2l7 12 7-12 7 12' fill='none' stroke='%23d9b45a' stroke-width='1.6'/%3E%3Ccircle cx='7' cy='11' r='1.4' fill='%23d9b45a'/%3E%3Ccircle cx='21' cy='11' r='1.4' fill='%23d9b45a'/%3E%3Ccircle cx='14' cy='3' r='1.1' fill='%23d9b45a'/%3E%3C/svg%3E");
-  --lattice: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Cpath d='M18 2 34 18 18 34 2 18z' fill='none' stroke='%23ffffff' stroke-opacity='.07' stroke-width='1.2'/%3E%3Ccircle cx='18' cy='18' r='2' fill='%23d9b45a' fill-opacity='.18'/%3E%3C/svg%3E");
+  --night: url("art/pattern.svg") center / 420px, radial-gradient(120% 90% at 70% 10%, #1f3d6e 0%, #13284a 45%, #0b1a33 100%);
+  --goldline: linear-gradient(90deg, #8a5a12, #f3d27a 25%, #c9932c 50%, #f3d27a 75%, #8a5a12);
   --page: #fff;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #15100d; --card: #211915; --ink: #f1e7d6; --muted: #b5a48f; --line: #3d3027; --soft: #2a201b;
-    --brand: #5a1620; --brand2: #7a2630; --indigo: #222d48; --note: #3d3216; --note-line: #9c8236; --note-ink: #f5e2ae;
+    --bg: #0d1424; --card: #16203a; --ink: #f1e7d6; --muted: #b3a890; --line: #2c3a5a; --soft: #1b2744;
+    --brand: #13284a; --brand2: #2c548f; --note: #3d3216; --note-line: #9c8236; --note-ink: #f5e2ae;
     --holiday: #ff8a80; --rc: #8ec5ff; --fast: #c9a6ff; --modern: #7fd6ac; --shadow: none;
   }
 }
@@ -36,7 +37,7 @@ h1 { font-size: 1.6rem; margin: 0; line-height: 1.2; font-weight: 700; }
 .sub { color: var(--muted); margin: 2px 0 0; }
 
 /* Section headings, with a small gold diamond like the ornaments in the siddur. */
-.sec { display: flex; align-items: center; gap: 8px; margin: 26px 2px 10px; font-size: 1.12rem; font-weight: 700; color: var(--brand); }
+.sec { display: flex; align-items: center; gap: 8px; margin: 26px 2px 10px; font-size: 1.15rem; font-weight: 700; color: var(--brand); }
 .sec::before { content: "◆"; color: var(--gold); font-size: .7rem; }
 .sec::after { content: ""; flex: 1; height: 1px; background: linear-gradient(to left, var(--line), transparent); }
 @media (prefers-color-scheme: dark) { .sec { color: var(--gold2); } }
@@ -44,37 +45,58 @@ h1 { font-size: 1.6rem; margin: 0; line-height: 1.2; font-weight: 700; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); }
 .card + .card { margin-top: 12px; }
 
-/* The burgundy band at the top of each screen, ending in a gold embroidery-like border. */
-.hero { position: relative; background: var(--lattice), linear-gradient(160deg, var(--brand), var(--indigo)); color: var(--brand-ink); margin: 0 -16px; padding: calc(18px + env(safe-area-inset-top)) 20px 30px; border-radius: 0 0 20px 20px; }
-.hero::after { content: ""; position: absolute; inset-inline: 14px; bottom: 8px; height: 14px; background: var(--pattern) repeat-x center; opacity: .9; }
-.hero .sub { color: rgba(255, 248, 234, .82); }
+/* The night-blue band at the top of each screen, with faint manuscript writing and a gold rule under it. */
+.hero { position: relative; background: var(--night); color: var(--brand-ink); margin: 0 -16px; padding: calc(16px + env(safe-area-inset-top)) 20px 22px; }
+.hero::after { content: ""; position: absolute; inset-inline: 0; bottom: -4px; height: 4px; background: var(--goldline); }
+.hero h1 { color: #f8efd9; }
+.hero .sub { color: rgba(248, 239, 217, .8); }
 .hero .chips { margin-top: 12px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { background: rgba(217, 180, 90, .2); border: 1px solid rgba(217, 180, 90, .55); border-radius: 99px; padding: 2px 12px; font-size: .9rem; }
-.count { margin-top: 10px; font-size: .95rem; color: #ffe9b0; }
+.chip { background: rgba(232, 196, 106, .14); border: 1px solid rgba(232, 196, 106, .6); color: #f8e7bd; border-radius: 99px; padding: 2px 12px; font-size: .9rem; }
+.cartouche { position: relative; width: min(330px, 86%); aspect-ratio: 360 / 132; margin: 4px auto 0; background: url("art/cartouche.svg") center / 100% 100% no-repeat; display: grid; place-items: center; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .35)); }
+.cartouche b { font-family: var(--serif); font-weight: 900; font-size: clamp(2rem, 10vw, 2.7rem); color: #2b1d0e; letter-spacing: .5px; line-height: 1; margin-top: -4px; }
+.ribbon { width: min(250px, 70%); aspect-ratio: 300 / 48; margin: -8px auto 0; background: url("art/ribbon.svg") center / 100% 100% no-repeat; display: grid; place-items: center; position: relative; }
+.ribbon span { font-family: var(--serif); font-weight: 700; color: #3a2508; font-size: clamp(.95rem, 4.2vw, 1.12rem); margin-top: -1px; }
+.hero .date { text-align: center; margin-top: 12px; }
+.hero .date h1 { font-size: 1.45rem; }
+.hero .date + .chips { justify-content: center; }
+.count { margin-top: 10px; font-size: .95rem; color: #f3d27a; text-align: center; display: flex; gap: 6px; align-items: center; justify-content: center; }
+.count svg { width: 18px; height: 18px; }
 .daynav { display: flex; gap: 8px; margin-top: 14px; }
-.daynav button { flex: 1; background: rgba(255, 255, 255, .1); color: inherit; border: 1px solid rgba(217, 180, 90, .55); border-radius: 10px; padding: 7px 6px; font-size: .92rem; }
+.daynav button { flex: 1; background: rgba(255, 255, 255, .06); color: inherit; border: 1px solid rgba(232, 196, 106, .55); border-radius: 10px; padding: 7px 6px; font-size: .92rem; }
 
-.now { display: flex; align-items: center; gap: 14px; width: 100%; border: 0; border-radius: 16px; background: linear-gradient(160deg, var(--gold2), var(--gold)); color: #2a1c14; padding: 16px 18px; text-align: start; box-shadow: var(--shadow); }
-.now .big { font-size: 1.7rem; font-weight: 700; line-height: 1.15; }
-.now .ic { font-size: 2rem; }
-.now .go { margin-inline-start: auto; font-size: 1.6rem; }
-
+.now { display: flex; align-items: center; gap: 14px; width: 100%; border: 0; border-radius: 18px; background: var(--night); color: var(--brand-ink); padding: 14px 16px; text-align: start; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.now::after { content: ""; position: absolute; inset-inline: 0; bottom: 0; height: 3px; background: var(--goldline); }
+.now .big { font-size: 1.75rem; font-weight: 700; line-height: 1.15; color: #f3d27a; }
+.now .medal { width: 64px; height: 64px; }
+.now .go { margin-inline-start: auto; font-size: 1.7rem; color: #f3d27a; }
 .resume { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 16px; background: var(--card); border: 2px dashed var(--gold); border-radius: 14px; padding: 12px 16px; text-align: start; }
-.resume > span:first-child { font-size: 1.5rem; color: var(--brand); }
+.medal { display: grid; place-items: center; width: 58px; height: 58px; background: url("art/medallion.svg") center / contain no-repeat; color: var(--brand); flex: none; }
+.medal svg { width: 28px; height: 28px; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tile { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 10px 10px; min-height: 78px; text-align: start; box-shadow: var(--shadow); }
+.tile > span:last-child { min-width: 0; }
+.tile b { display: block; font-family: var(--serif); font-size: 1.08rem; color: var(--brand); line-height: 1.2; }
+.tile small { display: block; color: var(--muted); font-size: .78rem; }
+.tile.wide { grid-column: 1 / -1; justify-content: center; }
+@media (prefers-color-scheme: dark) { .tile b { color: var(--gold2); } }
+.resume .medal { width: 46px; height: 46px; }
+.resume .medal svg { width: 22px; height: 22px; }
 .resume small { display: block; color: var(--muted); }
 
 .prayers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.prayer { display: flex; flex-direction: column; align-items: center; gap: 2px; background: var(--card); border: 2px solid var(--line); border-radius: 14px; padding: 12px 6px; min-height: 100px; box-shadow: var(--shadow); }
-.prayer .ic { font-size: 1.6rem; line-height: 1; }
+.prayer { display: flex; flex-direction: column; align-items: center; gap: 2px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 10px 6px; min-height: 120px; box-shadow: var(--shadow); }
+.prayer .medal { width: 54px; height: 54px; margin-bottom: 2px; }
 .prayer b { font-size: 1.25rem; color: var(--brand); }
 .prayer small { color: var(--muted); font-size: .78rem; line-height: 1.25; text-align: center; }
-.prayer.current { border-color: var(--gold); background: linear-gradient(var(--card), var(--soft)); }
+.prayer.current { border: 2px solid var(--gold); background: linear-gradient(var(--card), var(--soft)); }
 .prayer:disabled { opacity: .5; cursor: default; }
 @media (prefers-color-scheme: dark) { .prayer b { color: var(--gold2); } }
 
 .special { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
 .special small { display: block; color: var(--muted); font-size: .82rem; }
+.special > span { flex: 1; }
+.special select { max-width: 42%; }
 .special.on { border-color: var(--gold); background: var(--note); }
 .special select, .set select { padding: 9px; border-radius: 10px; border: 1px solid var(--line); background: var(--soft); max-width: 55%; }
 
@@ -120,7 +142,7 @@ details.card[open] > summary { margin-bottom: 6px; }
 .mhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
 .mhead h1 { text-align: center; flex: 1; }
 .mhead .sub { text-align: center; font-size: .9rem; }
-.mnav { background: rgba(255, 255, 255, .1); color: #fff; border: 1px solid rgba(217, 180, 90, .55); border-radius: 10px; min-width: 46px; min-height: 44px; font-size: 1.2rem; }
+.mnav { background: rgba(255, 255, 255, .06); color: #f3d27a; border: 1px solid rgba(232, 196, 106, .55); border-radius: 10px; min-width: 46px; min-height: 44px; font-size: 1.2rem; }
 .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-top: 14px; }
 .wd { text-align: center; font-size: .8rem; color: var(--brand); padding: 2px 0; font-weight: 700; }
 .cell { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 8px; min-height: 64px; padding: 3px 3px 4px; text-align: start; display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
@@ -143,20 +165,21 @@ details.card[open] > summary { margin-bottom: 6px; }
 .day .evs li { padding: 3px 0; }
 .day .prayers { margin-top: 10px; }
 
-.nav { position: fixed; inset-inline: 0; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--card); border-top: 2px solid var(--gold2); padding-bottom: env(safe-area-inset-bottom); z-index: 5; box-shadow: 0 -2px 8px rgba(60, 30, 10, .06); }
-.nav button { background: none; border: 0; padding: 7px 2px 9px; color: var(--muted); font-size: .8rem; display: flex; flex-direction: column; align-items: center; gap: 1px; }
-.nav .ni { font-size: 1.3rem; line-height: 1.2; filter: grayscale(1); opacity: .7; }
-.nav button[aria-current=page] { color: var(--brand); font-weight: 700; }
-.nav button[aria-current=page] .ni { filter: none; opacity: 1; }
-@media (prefers-color-scheme: dark) { .nav button[aria-current=page] { color: var(--gold2); } }
+.nav { position: fixed; inset-inline: 0; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--brand); border-top: 3px solid transparent; border-image: var(--goldline) 1; padding-bottom: env(safe-area-inset-bottom); z-index: 5; box-shadow: 0 -2px 8px rgba(60, 30, 10, .06); }
+.nav button { background: none; border: 0; padding: 7px 2px 9px; color: rgba(248, 239, 217, .7); font-size: .8rem; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.nav .ni { display: grid; place-items: center; height: 26px; }
+.nav .ni svg { width: 24px; height: 24px; }
+.nav button[aria-current=page] { color: #f3d27a; font-weight: 700; }
 
-.update { position: sticky; top: 0; z-index: 30; background: var(--brand); color: #fff; padding: 10px 16px; display: flex; gap: 12px; align-items: center; justify-content: center; }
+
+
+.update { position: sticky; top: 0; z-index: 30; background: var(--brand2); color: #fff; padding: 10px 16px; display: flex; gap: 12px; align-items: center; justify-content: center; }
 .update button { background: var(--gold2); color: #2a1c14; border: 0; border-radius: 8px; padding: 6px 14px; font-weight: 700; }
 
 /* Reader */
 #reader { position: fixed; inset: 0; display: flex; flex-direction: column; background: #e9e1d0; z-index: 20; }
 @media (prefers-color-scheme: dark) { #reader { background: #0e0b09; } }
-.rbar { display: flex; align-items: center; gap: 4px; background: var(--brand); color: var(--brand-ink); padding: calc(4px + env(safe-area-inset-top)) 6px 4px; border-bottom: 2px solid var(--gold2); }
+.rbar { display: flex; align-items: center; gap: 4px; background: var(--night); color: var(--brand-ink); padding: calc(4px + env(safe-area-inset-top)) 6px 4px; border-bottom: 2px solid var(--gold2); }
 .rtitle { flex: 1; min-width: 0; text-align: center; line-height: 1.2; }
 .rtitle b, .rtitle span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rtitle b { font-family: var(--serif); font-size: 1.1rem; }

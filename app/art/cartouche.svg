@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="132" viewBox="0 0 360 132">
+  <!-- Gold frame with scooped corners and a parchment middle, for the app's name. -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f8e08f"/><stop offset=".35" stop-color="#d6a33d"/><stop offset=".55" stop-color="#f3d27a"/><stop offset="1" stop-color="#9a6416"/>
+    </linearGradient>
+    <linearGradient id="p" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fdf8ec"/><stop offset=".6" stop-color="#efe3c8"/><stop offset="1" stop-color="#e2d1ac"/>
+    </linearGradient>
+  </defs>
+  <path d="M24 2h312a22 22 0 0 0 22 22v84a22 22 0 0 0-22 22H24a22 22 0 0 0-22-22V24A22 22 0 0 0 24 2z" fill="url(#g)"/>
+  <path d="M30 11h300a17 17 0 0 0 19 19v72a17 17 0 0 0-19 19H30a17 17 0 0 0-19-19V30a17 17 0 0 0 19-19z" fill="url(#p)"/>
+  <path d="M33 16h294a14 14 0 0 0 16 16v68a14 14 0 0 0-16 16H33a14 14 0 0 0-16-16V32a14 14 0 0 0 16-16z" fill="none" stroke="#7a4f12" stroke-width="1.4"/>
+  <g fill="#c9932c"><path d="M180 4l6 5-6 5-6-5z"/><path d="M180 118l6 5-6 5-6-5z"/></g>
+</svg>

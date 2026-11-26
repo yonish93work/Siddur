@@ -16,6 +16,7 @@ const TYPES = {
   '.pdf': 'application/pdf',
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
+  '.woff2': 'font/woff2',
   '.webmanifest': 'application/manifest+json; charset=utf-8',
 };
 

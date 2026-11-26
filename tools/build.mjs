@@ -18,9 +18,9 @@ if (JSON.parse(readFileSync(at('data', 'crops.json'), 'utf8')).length !== pages.
 
 rmSync(DIST, { recursive: true, force: true });
 mkdirSync(join(DIST, 'vendor'), { recursive: true });
-for (const f of ['index.html', 'style.css', 'manifest.webmanifest', 'icons']) cpSync(at('app', f), join(DIST, f), { recursive: true });
+for (const f of ["index.html", "style.css", "manifest.webmanifest", "icons", "art"]) cpSync(at('app', f), join(DIST, f), { recursive: true });
 mkdirSync(join(DIST, "fonts"), { recursive: true });
-for (const w of [400, 700]) cpSync(at("node_modules", "@fontsource", "frank-ruhl-libre", "files", `frank-ruhl-libre-hebrew-${w}-normal.woff2`), join(DIST, "fonts", `frank-ruhl-libre-hebrew-${w}-normal.woff2`));
+for (const w of [400, 700, 900]) cpSync(at("node_modules", "@fontsource", "frank-ruhl-libre", "files", `frank-ruhl-libre-hebrew-${w}-normal.woff2`), join(DIST, "fonts", `frank-ruhl-libre-hebrew-${w}-normal.woff2`));
 cpSync(at("node_modules", "@fontsource", "frank-ruhl-libre", "LICENSE"), join(DIST, "fonts", "LICENSE.txt"));
 cpSync(at('source', 'siddur.pdf'), join(DIST, 'siddur.pdf'));
 // The "legacy" build of PDF.js also runs on older phones.

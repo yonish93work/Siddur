@@ -5,6 +5,7 @@ import { dayInfo } from './logic/calendar.js';
 import { PRAYERS, reminders, dayTitles } from './logic/prayers.js';
 import { HIGHLIGHTS } from './logic/highlights.js';
 import { ANCHORS } from './logic/anchors.js';
+import { ICONS } from './icons.js';
 import { pageIndex } from './logic/pages.js';
 import { buildMenu } from './logic/sections.js';
 import { eventsBetween } from './logic/events.js';
@@ -44,7 +45,8 @@ const weekdayName = d => (d.getDay() === 6 ? 'שבת' : `יום ${WEEKDAY[d.getD
 const time = d => (d && !Number.isNaN(d.getTime()) ? new Intl.DateTimeFormat('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: place().tz }).format(d) : '—');
 const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const gregText = d => d.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' });
-const ICON = { shacharit: '🌅', mincha: '☀️', arvit: '🌙' };
+// A drawn icon inside a round gold-edged medallion.
+const medal = key => { const s = el('span', { className: 'medal' }); s.innerHTML = ICONS[key] ?? ''; return s; };
 
 // ---- opening a prayer or a section
 // The day's facts, plus a mourner / groom / circumcision chosen for that date (no Tachanun, p. 68).
@@ -156,7 +158,7 @@ function prayerButtons(dates, current) {
   return el('div', { className: 'prayers' }, ['shacharit', 'mincha', 'arvit'].map(prayer => {
     const civil = dates[prayer], holy = holyName(prayer, civil), d = prayerDate(prayer, civil);
     const b = el('button', { type: 'button', className: `prayer${prayer === current ? ' current' : ''}`, onclick: () => openPrayer(prayer, civil) },
-      el('span', { className: 'ic', textContent: ICON[prayer], ariaHidden: 'true' }),
+      medal(prayer),
       el('b', { textContent: PRAYERS[prayer].name }),
       el('small', { textContent: holy ? `${holy}: לא מוצג` : `${prayer === 'arvit' ? 'ליל ' : ''}${weekdayName(prayer === 'arvit' ? d.greg() : civil)}` }));
     b.disabled = !!holy;
@@ -186,7 +188,7 @@ function renderHome() {
   else if (current) {
     const d = prayerDate(current, dates[current]);
     nowBox = el('button', { type: 'button', className: 'now', onclick: () => openPrayer(current, dates[current]) },
-      el('span', { className: 'ic', textContent: ICON[current], ariaHidden: 'true' }),
+      medal(current),
       el('span', {}, el('span', { textContent: 'התפילה עכשיו' }), el('div', { className: 'big', textContent: PRAYERS[current].name }), el('span', { textContent: `${current === 'arvit' ? 'ליל ' : ''}${heb(d)}` })),
       el('span', { className: 'go', textContent: '‹', ariaHidden: 'true' }));
   }
@@ -195,20 +197,23 @@ function renderHome() {
   const resume = loadResume();
   $('home').replaceChildren(
     el('header', { className: 'hero' },
-      el('h1', { textContent: `${weekdayName(hd.greg())}, ${heb(hd)}` }),
-      el('p', { className: 'sub', textContent: `${gregText(hd.greg())}${dates.isToday && iso(hd.greg()) !== iso(dates.today) ? ' · היום העברי מתחיל בשקיעה' : ''}` }),
+      el('div', { className: 'cartouche' }, el('b', { textContent: 'תפילת שלמה' })),
+      el('div', { className: 'ribbon' }, el('span', { textContent: 'נוסח תימן שאמי' })),
+      el('div', { className: 'date' },
+        el('h1', { textContent: `${weekdayName(hd.greg())}, ${heb(hd)}` }),
+        el('p', { className: 'sub', textContent: `${gregText(hd.greg())}${dates.isToday && iso(hd.greg()) !== iso(dates.today) ? ' · היום העברי מתחיל בשקיעה' : ''}` })),
       titles.length ? el('div', { className: 'chips' }, titles.map(t => el('span', { className: 'chip', textContent: t }))) : '',
       dates.isToday ? countdown() : '',
       el('div', { className: 'daynav' }, btn('→ יום קודם', () => step(-1), ''), chosen ? btn('חזרה להיום', () => { chosen = null; renderHome(); }, '') : '', btn('יום הבא ←', () => step(1), ''))),
     installCard(),
     resume ? el('button', { type: 'button', className: 'resume', onclick: () => reopen(resume) },
-      el('span', { textContent: '↩' }), el('span', {}, el('b', { textContent: 'להמשיך מאיפה שעצרתי' }), el('small', { textContent: `${resume.title}${resume.label ? `, עמוד ${resume.label}` : ''}` }))) : '',
+      medal('back'), el('span', {}, el('b', { textContent: 'להמשיך מאיפה שעצרתי' }), el('small', { textContent: `${resume.title}${resume.label ? `, עמוד ${resume.label}` : ''}` }))) : '',
     nowBox ? sec(dates.isToday ? 'עכשיו' : '') : '', nowBox,
     sec(dates.isToday ? 'תפילות היום' : `תפילות ל${weekdayName(chosen)}`),
     prayerButtons(dates, current),
+    sec('גישה מהירה'), tiles(info),
     specialCard(hd.greg()),
     sec('זמני היום'), timesCard(dates.isToday ? dates.today : chosen),
-    sec('קיצורים'), extras(info),
     sayPrayer ? todayCard(sayPrayer, dates[sayPrayer]) : '',
     sec('שיתוף'), shareCard(),
     el('p', { className: 'draft', textContent: 'גרסת ניסיון: החוקים נכתבו לפי ההוראות שבסידור, ועדיין לא אומתו בידי בקיא במנהג. בכל ספק יש לנהוג לפי הסידור המודפס והרב.' }),
@@ -225,7 +230,9 @@ function countdown() {
   if (!nextOne) return '';
   const mins = Math.round((nextOne[1].getTime() - now) / 60000);
   const text = mins < 60 ? `${mins} דקות` : `${Math.floor(mins / 60)} שעות ו-${mins % 60} דקות`;
-  return el('div', { className: 'count' }, el('span', { textContent: '⏳' }), ` ${nextOne[0]} בעוד ${mins === 1 ? 'דקה' : text} (${time(nextOne[1])})`);
+  const c = el('div', { className: 'count' }, el('span', {}), `${nextOne[0]} בעוד ${mins === 1 ? 'דקה' : text} (${time(nextOne[1])})`);
+  c.firstChild.innerHTML = ICONS.clock;
+  return c;
 }
 
 // A mourner, a groom or a circumcision today: no Tachanun (p. 68); in a mourner's house also Psalm 49 (p. 98).
@@ -269,22 +276,33 @@ function sectionByTitle(part) {
   for (const list of menu.values()) for (const e of list) if (e.title.includes(part)) return e;
   return null;
 }
-function extras(info) {
-  const want = [];
+// The big buttons: what is needed every day, plus what the season brings (Chanukah lights, the Omer...).
+function tiles(info) {
   const tomorrowChanukah = dayInfo(new HDate(info.d.abs() + 1), opts()).chanukah;
-  if (info.chanukah || tomorrowChanukah) want.push('הדלקת נרות', 'מעוז צור');
-  if (info.megillah) want.push('מגילת אסתר');
-  if (info.omer) want.push('ספירת העומר');
-  if (info.ashmorot) want.push('אשמורות');
-  if (info.levana) want.push('ברכת הלבנה');
-  if (info.fast === 'av') want.push('מגילת איכה');
-  want.push('ברכת המזון', 'מעין שלוש', 'קריאת שמע על המטה', 'תפלת הדרך');
-  return el('ul', { className: 'list card' }, want.map(sectionByTitle).filter(Boolean).map(menuItem));
+  const seasonal = [
+    (info.chanukah || tomorrowChanukah) && ['הדלקת נרות', 'candle', 'נרות חנוכה'],
+    info.megillah && ['מגילת אסתר', 'scroll', 'פורים'],
+    info.omer && ['ספירת העומר', 'omer', `היום ${info.omer} בעומר`],
+    info.ashmorot && ['אשמורות', 'book', 'סליחות'],
+    info.levana && ['ברכת הלבנה', 'moonStar', ''],
+    info.fast === 'av' && ['מגילת איכה', 'scroll', 'תשעה באב'],
+  ].filter(Boolean);
+  const daily = [['ברכת המזון', 'cup', ''], ['מעין שלוש', 'grapes', 'ברכה מעין שלוש'], ['תפלת הדרך', 'road', ''], ['קריאת שמע על המטה', 'bed', '']];
+  const tile = (title, icon, sub, onclick, wide) => el('button', { type: 'button', className: `tile${wide ? ' wide' : ''}`, onclick }, medal(icon), el('span', {}, el('b', { textContent: title }), sub ? el('small', { textContent: sub }) : ''));
+  const fromMenu = ([part, icon, sub]) => { const e = sectionByTitle(part); return e && tile(part === 'מעין שלוש' ? 'מעין שלוש' : e.title.replace(/^חנוכה: /, ''), icon, sub || `עמ' ${idx.label(e.from) ?? ''}`, () => openRange(e.title, e.from, e.to)); };
+  // "Asher Yatzar" is printed on the first page of Birchot Hashachar (p. 9).
+  const asher = tile('אשר יצר', 'jug', "עמ' 9", () => openRange('אשר יצר', idx.first('9'), idx.first('9')));
+  const list = [...seasonal.map(fromMenu), ...daily.slice(0, 1).map(fromMenu), asher, ...daily.slice(1).map(fromMenu)].filter(Boolean);
+  list.push(tile('כל התפילות', 'book', 'תוכן העניינים', () => go('browse'), list.length % 2 === 0));
+  return el('div', { className: 'tiles' }, list);
 }
 const menuItem = e => el('li', {}, el('button', { type: 'button', className: 'item', onclick: () => openRange(e.title, e.from, e.to) },
   el('span', { textContent: e.title }), el('span', { className: 'pg', textContent: idx.label(e.from) ? `עמ' ${idx.label(e.from)}` : '' })));
 
 // ---- Hebrew calendar
+// Short names, so they fit in the small day squares.
+const short = t => t.replace(/^פרשת /, '').replace(/^ראש חודש .*/, 'ר״ח').replace(/^חנוכה, יום ח׳$/, 'חנוכה ח׳')
+  .replace(/^חנוכה, (\S+) נרו?ת?$/, 'חנוכה $1').replace(/^שבת מברכים.*/, 'מברכים').replace(/ \(חוה״מ\)/, '').replace(/^יום הזכרון.*/, 'יום הזכרון');
 let calMonth = null, calSel = null; // calMonth = HDate of the 1st of the month shown; calSel = absolute day picked
 
 function renderCalendar() {
@@ -315,7 +333,7 @@ function renderCalendar() {
     grid.append(el('button', { type: 'button', className: cls, onclick: () => { calSel = a; renderCalendar(); } },
       el('span', { className: 'hd', textContent: d.renderGematriya(true).split(' ')[0] }),
       el('span', { className: 'gd', textContent: d.greg().getDate() }),
-      list.slice(0, 2).map(e => el('span', { className: `ev ${e.kind}`, textContent: e.text.replace('פרשת ', '') }))));
+      list.slice(0, 2).map(e => el('span', { className: `ev ${e.kind}`, textContent: short(e.text) }))));
   }
 
   const sel = new HDate(calSel), selEv = ev.get(calSel)?.events ?? [], civil = sel.greg();
@@ -505,6 +523,8 @@ function setupUpdates() {
   }).catch(console.error);
 }
 
+// Drawn icons in the bottom bar.
+for (const [b, key] of [...$('nav').children].map((b, k) => [b, ['book', 'calendar', 'scroll', 'gear'][k]])) b.querySelector('.ni').innerHTML = ICONS[key];
 go('home');
 setupUpdates();
 // Midnight and sunset pass while the app is open: refresh the home screen when the user comes back to it.
