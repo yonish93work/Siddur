@@ -1,11 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="300" height="48" viewBox="0 0 300 48">
-  <!-- Gold ribbon under the frame, with rolled ends. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="50" viewBox="0 0 300 50">
+  <!-- Soft gold ribbon with rolled, rounded ends. -->
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#f6da84"/><stop offset=".5" stop-color="#c9932c"/><stop offset="1" stop-color="#8a5a12"/>
+      <stop offset="0" stop-color="#fbe3a0"/><stop offset=".45" stop-color="#d6a440"/><stop offset="1" stop-color="#93621a"/>
+    </linearGradient>
+    <linearGradient id="d" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b07a26"/><stop offset="1" stop-color="#6e450c"/>
     </linearGradient>
   </defs>
-  <path d="M2 14 26 8l-6 16 6 16L2 34z" fill="#8a5a12"/>
-  <path d="M298 14 274 8l6 16-6 16 24-6z" fill="#8a5a12"/>
-  <path d="M22 6C90 14 210 14 278 6v32C210 46 90 46 22 38z" fill="url(#g)" stroke="#7a4f12" stroke-width="1"/>
+  <path d="M4 18c8-4 16-6 24-6l-5 13 5 13c-8 0-16-2-24-6 5-4 5-10 0-14z" fill="url(#d)"/>
+  <path d="M296 18c-8-4-16-6-24-6l5 13-5 13c8 0 16-2 24-6-5-4-5-10 0-14z" fill="url(#d)"/>
+  <path d="M24 8C90 16 210 16 276 8c5 0 8 4 8 9v16c0 5-3 9-8 9C210 34 90 34 24 42c-5 0-8-4-8-9V17c0-5 3-9 8-9z" fill="url(#g)" stroke="#86561a" stroke-width="1"/>
+  <path d="M28 13C92 20 208 20 272 13" fill="none" stroke="#fff3c8" stroke-opacity=".7" stroke-width="1.2"/>
 </svg>

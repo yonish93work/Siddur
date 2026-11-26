@@ -21,7 +21,7 @@ const SCREENS = ['home', 'calendar', 'browse', 'settings'];
 
 // ---- settings, kept on the phone only
 // special = { date: 'YYYY-MM-DD', kind: 'avel' | 'chatan' | 'brit' }: a one-day change to the prayers (p. 68).
-const DEFAULTS = { il: true, walled: false, adjacent: false, place: null, night: false, special: null, installHidden: false };
+const DEFAULTS = { il: true, walled: false, adjacent: false, place: null, night: false, special: null, installHidden: false, keepAwake: true, quiet: false };
 const SPECIAL = { avel: 'בית האבל', chatan: 'חתן בבית הכנסת', brit: 'ברית מילה' };
 const settings = { ...DEFAULTS };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('settings') ?? '{}')); } catch { /* storage blocked: defaults */ }
@@ -98,7 +98,8 @@ function show(plan, startAt, resume) {
   for (const s of SCREENS) $(s).hidden = true;
   $('nav').hidden = true;
   openReader(plan, {
-    idx, crops, startAt, onError: showError, night: settings.night,
+    idx, crops, startAt, onError: showError, night: settings.night, keepAwake: settings.keepAwake,
+    toast: settings.quiet && resume?.kind === 'prayer' ? '🔕 כדאי להעביר את הטלפון למצב שקט' : '',
     onNight: on => { settings.night = on; save(); },
     onMove: n => saveResume({ ...resume, n, label: idx.label(n), at: Date.now() }),
     onReport: w => report(plan, w),
@@ -171,8 +172,17 @@ function timesCard(date, compact = false) {
   const rows = zmanimList(date, p).filter(([n]) => !compact || !n.includes('מג"א'));
   return el('div', { className: 'card times' },
     el('div', { className: 'where' }, el('b', { textContent: `זמני היום · ${p.name}` }), btn('שינוי מקום', () => go('settings'), 'link')),
-    el('ul', { className: 'list' }, rows.map(([n, t]) => el('li', { className: 'plain' }, el('span', { textContent: n }), el('span', { textContent: time(t) })))),
-    el('p', { className: 'sub', style: 'font-size:.8rem;margin-top:6px', textContent: 'לפי השיטות המקובלות. צאת הכוכבים: 8.5 מעלות.' }));
+    el('ul', { className: 'list' }, rows.map(([n, t]) => el('li', { className: 'plain' }, el('span', { textContent: n }), el('span', { textContent: time(t) })))));
+}
+
+// On the home screen the day's times open with a tap (the calendar always shows them).
+let timesOpen = false;
+function timesButton(date) {
+  const box = el('div', { hidden: !timesOpen, style: 'margin-top:10px' }, timesCard(date));
+  const b = el('button', { type: 'button', className: 'timesbtn', onclick: () => { timesOpen = !timesOpen; box.hidden = !timesOpen; b.setAttribute('aria-expanded', String(timesOpen)); } },
+    medal('clock'), el('span', {}, el('b', { textContent: 'זמני היום' }), el('small', { textContent: `${place().name} · זריחה, שקיעה ועוד` })), el('span', { className: 'chev', textContent: '‹' }));
+  b.setAttribute('aria-expanded', String(timesOpen));
+  return el('div', {}, b, box);
 }
 
 // ---- home
@@ -213,8 +223,7 @@ function renderHome() {
     prayerButtons(dates, current),
     sec('גישה מהירה'), tiles(info),
     specialCard(hd.greg()),
-    sec('זמני היום'), timesCard(dates.isToday ? dates.today : chosen),
-    sayPrayer ? todayCard(sayPrayer, dates[sayPrayer]) : '',
+    timesButton(dates.isToday ? dates.today : chosen),
     sec('שיתוף'), shareCard(),
     el('p', { className: 'draft', textContent: 'גרסת ניסיון: החוקים נכתבו לפי ההוראות שבסידור, ועדיין לא אומתו בידי בקיא במנהג. בכל ספק יש לנהוג לפי הסידור המודפס והרב.' }),
   );
@@ -287,14 +296,87 @@ function tiles(info) {
     info.levana && ['ברכת הלבנה', 'moonStar', ''],
     info.fast === 'av' && ['מגילת איכה', 'scroll', 'תשעה באב'],
   ].filter(Boolean);
-  const daily = [['ברכת המזון', 'cup', ''], ['מעין שלוש', 'grapes', 'ברכה מעין שלוש'], ['תפלת הדרך', 'road', ''], ['קריאת שמע על המטה', 'bed', '']];
+  const daily = [['ברכת המזון', 'cup', ''], ['מעין שלוש', 'grapes', ''], ['תפלת הדרך', 'road', ''], ['קריאת שמע על המטה', 'bed', '']];
   const tile = (title, icon, sub, onclick, wide) => el('button', { type: 'button', className: `tile${wide ? ' wide' : ''}`, onclick }, medal(icon), el('span', {}, el('b', { textContent: title }), sub ? el('small', { textContent: sub }) : ''));
   const fromMenu = ([part, icon, sub]) => { const e = sectionByTitle(part); return e && tile(part === 'מעין שלוש' ? 'מעין שלוש' : e.title.replace(/^חנוכה: /, ''), icon, sub || `עמ' ${idx.label(e.from) ?? ''}`, () => openRange(e.title, e.from, e.to)); };
   // "Asher Yatzar" is printed on the first page of Birchot Hashachar (p. 9).
   const asher = tile('אשר יצר', 'jug', "עמ' 9", () => openRange('אשר יצר', idx.first('9'), idx.first('9')));
   const list = [...seasonal.map(fromMenu), ...daily.slice(0, 1).map(fromMenu), asher, ...daily.slice(1).map(fromMenu)].filter(Boolean);
+  list.push(tile('מצפן לכותל', 'compass', 'כיוון התפילה', openCompass));
   list.push(tile('כל התפילות', 'book', 'תוכן העניינים', () => go('browse'), list.length % 2 === 0));
   return el('div', { className: 'tiles' }, list);
+}
+
+// ---- compass: which way to face to pray towards the Western Wall, from where the phone is
+const KOTEL = { lat: 31.7767, lon: 35.2345 };
+function bearingTo(lat, lon) {
+  const r = Math.PI / 180, f1 = lat * r, f2 = KOTEL.lat * r, dl = (KOTEL.lon - lon) * r;
+  const y = Math.sin(dl) * Math.cos(f2), x = Math.cos(f1) * Math.sin(f2) - Math.sin(f1) * Math.cos(f2) * Math.cos(dl);
+  return (Math.atan2(y, x) / r + 360) % 360;
+}
+function distanceKm(lat, lon) {
+  const r = Math.PI / 180, a = Math.sin((KOTEL.lat - lat) * r / 2) ** 2 + Math.cos(lat * r) * Math.cos(KOTEL.lat * r) * Math.sin((KOTEL.lon - lon) * r / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(a));
+}
+let compassStop = null;
+async function openCompass() {
+  // iPhones allow the compass only if asked right at the tap, so ask before anything else.
+  const orientation = typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'
+    ? DeviceOrientationEvent.requestPermission().catch(() => 'denied') : Promise.resolve('granted');
+  const status = el('p', { className: 'sub', textContent: 'מבקש את המיקום שלך…' });
+  const ring = el('div', { className: 'ring' }, [['צ', 0], ['מז', 90], ['ד', 180], ['מע', 270]].map(([t, deg]) => el('span', { textContent: t, style: `rotate:${deg}deg` })));
+  const needle = el('div', { className: 'needle', hidden: true });
+  const dial = el('div', { className: 'dial' }, ring, needle, el('div', { className: 'hub' }));
+  const info = el('p', { className: 'bearing' });
+  const help = el('div', { className: 'card', hidden: true });
+  const close = () => { compassStop?.(); compassStop = null; box.remove(); };
+  const box = el('div', { className: 'overlay compass' },
+    el('header', { className: 'hero' }, el('h1', { textContent: 'מצפן לכותל' }), el('p', { className: 'sub', textContent: 'סובב את הטלפון עד שהחץ הזהוב מצביע ישר קדימה' })),
+    dial, info, status, help,
+    el('div', { style: 'display:flex;gap:10px;justify-content:center;margin-top:12px' }, btn('נסה שוב', () => { close(); openCompass(); }), btn('סגור', close, 'btn primary')));
+  document.body.append(box);
+
+  // 1. Location: asked for every time the compass opens, as the phone's own permission prompt.
+  const pos = await new Promise(res => {
+    if (!navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(p => res(p.coords), err => res({ error: err.code }), { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+  });
+  if (!pos || pos.error) {
+    status.textContent = 'כדי להראות את הכיוון לכותל, צריך לאשר לאפליקציה את שירותי המיקום.';
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    help.hidden = false;
+    help.replaceChildren(el('b', { textContent: 'איך מאשרים מיקום' }), el('ol', {}, (ios
+      ? ['הגדרות ← פרטיות ואבטחה ← שירותי מיקום: להפעיל', 'באותו מסך: Safari (או "אתרי Safari") ← "בזמן השימוש"', 'לחזור לכאן וללחוץ "נסה שוב"']
+      : ['להפעיל "מיקום" בתפריט המהיר של הטלפון (מושכים את המסך מלמעלה)', 'ב-Chrome: ללחוץ על סמל המנעול או ⓘ ליד הכתובת ← הרשאות ← מיקום ← "אפשר"', 'לחזור לכאן וללחוץ "נסה שוב"']).map(t => el('li', { textContent: t }))));
+    return;
+  }
+  const target = bearingTo(pos.latitude, pos.longitude);
+  const km = distanceKm(pos.latitude, pos.longitude);
+  needle.hidden = false;
+  info.textContent = km < 0.05 ? 'אתה ליד הכותל.' : `הכותל בכיוון ${Math.round(target)}° מהצפון, במרחק ${km < 10 ? km.toFixed(1) : Math.round(km)} ק"מ`;
+  needle.style.transform = `rotate(${target}deg)`;
+  status.textContent = 'מחכה למצפן של הטלפון…';
+
+  // 2. The phone's compass (iPhone asks for permission once).
+  if (await orientation !== 'granted') {
+    status.textContent = 'לא אושרה גישה למצפן של הטלפון. אפשר לכוון לפי המעלות (0° הוא צפון), או לסגור, לפתוח שוב את המצפן וללחוץ "אישור".';
+    return;
+  }
+  let got = false;
+  const onTurn = e => {
+    const heading = e.webkitCompassHeading ?? (e.absolute || e.type === 'deviceorientationabsolute' ? (360 - (e.alpha ?? 0)) % 360 : null);
+    if (heading == null) return;
+    got = true;
+    ring.style.transform = `rotate(${-heading}deg)`;
+    needle.style.transform = `rotate(${target - heading}deg)`;
+    const off = Math.abs(((target - heading + 540) % 360) - 180);
+    dial.classList.toggle('aligned', off < 8);
+    status.textContent = off < 8 ? '✓ אתה מכוון לכותל' : 'סובב לאט עד שהחץ מצביע קדימה';
+  };
+  const evName = 'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation';
+  addEventListener(evName, onTurn);
+  compassStop = () => removeEventListener(evName, onTurn);
+  setTimeout(() => { if (!got && box.isConnected) status.textContent = 'לא התקבל מצפן מהטלפון (במחשב אין מצפן). אפשר לכוון לפי המעלות: 0° הוא צפון.'; }, 3000);
 }
 const menuItem = e => el('li', {}, el('button', { type: 'button', className: 'item', onclick: () => openRange(e.title, e.from, e.to) },
   el('span', { textContent: e.title }), el('span', { className: 'pg', textContent: idx.label(e.from) ? `עמ' ${idx.label(e.from)}` : '' })));
@@ -302,7 +384,8 @@ const menuItem = e => el('li', {}, el('button', { type: 'button', className: 'it
 // ---- Hebrew calendar
 // Short names, so they fit in the small day squares.
 const short = t => t.replace(/^פרשת /, '').replace(/^ראש חודש .*/, 'ר״ח').replace(/^חנוכה, יום ח׳$/, 'חנוכה ח׳')
-  .replace(/^חנוכה, (\S+) נרו?ת?$/, 'חנוכה $1').replace(/^שבת מברכים.*/, 'מברכים').replace(/ \(חוה״מ\)/, '').replace(/^יום הזכרון.*/, 'יום הזכרון');
+  .replace(/^חנוכה, (\S+) נרו?ת?$/, 'חנוכה $1').replace(/^שבת מברכים.*/, 'מברכים').replace(/ \(חוה״מ\)/, '').replace(/^יום הזכרון.*/, 'יום הזכרון')
+  .replace(/^(צום גדליה|עשרה בטבת|שבעה עשר בתמוז|צום י״ז בתמוז)$/, 'צום').replace(/^תענית אסתר$/, 'תענית').replace(/^תענית בכורות$/, 'בכורות');
 let calMonth = null, calSel = null; // calMonth = HDate of the 1st of the month shown; calSel = absolute day picked
 
 function renderCalendar() {
@@ -329,11 +412,13 @@ function renderCalendar() {
   for (let dnum = 1; dnum <= days; dnum++) {
     const d = new HDate(dnum, m, y), a = d.abs(), info = ev.get(a)?.info ?? dayInfo(d, opts());
     const list = (ev.get(a)?.events ?? []).filter(e => e.kind !== 'time' && e.kind !== 'omer');
-    const cls = ['cell', d.getDay() === 6 && 'sat', info.noTachanun && d.getDay() !== 6 && 'notach', a === today.abs() && 'today', a === calSel && 'sel'].filter(Boolean).join(' ');
+    // The square takes the colour of the day's most important event: holiday, fast, Rosh Chodesh, national day.
+    const main = ['holiday', 'fast', 'rc', 'modern'].find(k => list.some(e => e.kind === k));
+    const cls = ['cell', main && `k-${main}`, d.getDay() === 6 && 'sat', info.noTachanun && d.getDay() !== 6 && 'notach', a === today.abs() && 'today', a === calSel && 'sel'].filter(Boolean).join(' ');
     grid.append(el('button', { type: 'button', className: cls, onclick: () => { calSel = a; renderCalendar(); } },
       el('span', { className: 'hd', textContent: d.renderGematriya(true).split(' ')[0] }),
       el('span', { className: 'gd', textContent: d.greg().getDate() }),
-      list.slice(0, 2).map(e => el('span', { className: `ev ${e.kind}`, textContent: short(e.text) }))));
+      list.slice(0, 2).map(e => el('span', { className: `tag ${e.kind}`, textContent: short(e.text) }))));
   }
 
   const sel = new HDate(calSel), selEv = ev.get(calSel)?.events ?? [], civil = sel.greg();
@@ -341,7 +426,7 @@ function renderCalendar() {
   const day = el('div', { className: 'card day' },
     el('h2', { textContent: `${weekdayName(civil)}, ${heb(sel)}` }),
     el('p', { className: 'sub', textContent: gregText(civil) }),
-    selEv.length ? el('ul', { className: 'evs' }, selEv.map(e => el('li', { className: e.kind, textContent: e.text }))) : el('p', { className: 'sub', textContent: 'אין אירועים מיוחדים.' }),
+    selEv.length ? el('ul', { className: 'evs' }, selEv.map(e => el('li', {}, el('span', { className: `tag ${e.kind}`, textContent: e.text })))) : el('p', { className: 'sub', textContent: 'אין אירועים מיוחדים.' }),
     ev.get(calSel)?.info?.noTachanun ? el('p', { className: 'sub', textContent: `אין תחנון: ${ev.get(calSel).info.noTachanun}` }) : '',
     prayerButtons(dates, null),
   );
@@ -355,8 +440,10 @@ function renderCalendar() {
         el('button', { type: 'button', className: 'mnav', onclick: () => move(1), ariaLabel: 'החודש הבא', textContent: '←' })),
       el('div', { className: 'daynav' }, btn('היום', () => { calMonth = null; calSel = null; renderCalendar(); }, ''))),
     grid,
-    el('div', { className: 'legend' }, el('span', {}, el('i'), 'יום בלי תחנון'),
-      el('span', { className: 'holiday', textContent: 'חג' }), el('span', { className: 'rc', textContent: 'ראש חודש' }), el('span', { className: 'fast', textContent: 'צום' })),
+    el('div', { className: 'legend' },
+      el('span', { className: 'tag holiday', textContent: 'חג' }), el('span', { className: 'tag rc', textContent: 'ראש חודש' }),
+      el('span', { className: 'tag fast', textContent: 'צום' }), el('span', { className: 'tag modern', textContent: 'יום לאומי' }),
+      el('span', {}, el('i'), 'יום בלי תחנון')),
     sec('היום שנבחר'), day,
     sec('זמני היום'), timesCard(civil),
   );
@@ -437,8 +524,11 @@ function renderSettings() {
     return el('label', { className: 'set' }, el('span', {}, title, el('small', { textContent: sub })), input);
   };
   const status = el('small');
+  const byName = (a, b) => a[1].name.localeCompare(b[1].name, 'he');
+  const group = (label, g) => el('optgroup', { label }, [...CITIES.entries()].filter(([, c]) => c.group === g).sort(byName).map(([k, c]) => el('option', { value: String(k), textContent: c.name })));
   const city = el('select', { onchange: e => { settings.place = e.target.value === '0' ? null : CITIES[+e.target.value] ?? settings.place; save(); renderSettings(); } },
-    CITIES.map((c, k) => el('option', { value: String(k), textContent: c.name })),
+    el('option', { value: '0', textContent: 'ירושלים' }),
+    group('יישובים ושכונות תימניים', 'yemenite'), group('ערים', 'city'),
     settings.place && !CITIES.some(c => c.name === settings.place.name) ? el('option', { value: 'mine', textContent: 'המיקום שלי' }) : '');
   city.value = settings.place ? String(CITIES.findIndex(c => c.name === settings.place.name)).replace('-1', 'mine') : '0';
   city.setAttribute('aria-label', 'עיר');
@@ -455,28 +545,31 @@ function renderSettings() {
     el('option', { value: 'il', textContent: 'ארץ ישראל' }), el('option', { value: 'abroad', textContent: 'חוץ לארץ' }));
   il.value = settings.il ? 'il' : 'abroad';
 
-  const saved = el('small', { textContent: 'בודק…' });
+  const saved = el('span', { textContent: '' });
   $('settings').replaceChildren(
     el('header', { className: 'hero' }, el('h1', { textContent: 'הגדרות' }), el('p', { className: 'sub', textContent: 'נשמרות רק בטלפון הזה' })),
     sec('מקום'),
     el('div', { className: 'card' },
-      el('label', { className: 'set' }, el('span', {}, 'עיר לזמני היום', el('small', { textContent: `עכשיו: ${place().name}` })), city),
+      el('label', { className: 'set' }, el('span', {}, 'עיר או יישוב לזמני היום', el('small', { textContent: `עכשיו: ${place().name}` })), city),
       el('div', { className: 'set' }, el('span', {}, 'מיקום מדויק', status), locate),
-      el('label', { className: 'set' }, el('span', {}, 'ארץ או חוץ לארץ', el('small', { textContent: 'משפיע על ימים טובים ועל שאלת גשמים' })), il)),
+      el('label', { className: 'set' }, el('span', {}, 'מקום מגורים', el('small', { textContent: 'ארץ ישראל או חוץ לארץ. משפיע על ימים טובים ועל שאלת גשמים' })), il)),
+    sec('בזמן התפילה'),
+    el('div', { className: 'card' },
+      check('keepAwake', 'מסך פעיל', 'המסך לא נכבה ולא ננעל כל עוד הסידור פתוח, כדי שלא יכבה באמצע התפילה'),
+      check('quiet', 'תזכורת למצב שקט', 'בפתיחת תפילה תופיע תזכורת להעביר את הטלפון למצב שקט. אפליקציה שמותקנת מהדפדפן לא יכולה להשתיק את הטלפון בעצמה, ולכן זו תזכורת')),
     sec('מנהג'),
     el('div', { className: 'card' },
       check('walled', 'עיר מוקפת חומה', 'פורים בט"ו (ירושלים)'),
       check('adjacent', 'מנחה וערבית סמוכות', 'במנחה בלי תחנון ובלי עלינו, לפי עמוד 125')),
-    sec('בלי אינטרנט'),
-    el('div', { className: 'card' }, el('p', { className: 'sub', style: 'margin:0', textContent: 'הסידור נשמר בטלפון בפעם הראשונה (כ-13 מגה). אחר כך אפשר להתפלל גם בלי רשת.' }), saved),
     sec('שיתוף'), shareCard(),
-    el('p', { className: 'draft', textContent: `גרסה ${__VERSION__}. סידור תפילת שלמה, נוסח תימן שאמי. המיקום וההגדרות נשארים בטלפון ואינם נשלחים.` }));
+    el('p', { className: 'draft' }, 'הסידור נשמר בטלפון בפתיחה הראשונה (כ-13 מגה), ואחר כך עובד גם בלי אינטרנט. ', saved),
+    el('p', { className: 'draft', style: 'margin-top:6px', textContent: `גרסה ${__VERSION__}. סידור תפילת שלמה, נוסח תימן שאמי. המיקום וההגדרות נשארים בטלפון ואינם נשלחים. תמונות הרקע: כתב יד של רבי שלום שבזי (תכלאל, 1676) וכתב יד תימני של "מורה נבוכים", נחלת הכלל.` }));
   const report = async () => {
     if (!saved.isConnected) return;
     // The whole app is saved once the background worker (sw.js) has finished installing.
     const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration().catch(() => null) : null;
-    if (reg?.active) { saved.textContent = 'הסידור שמור בטלפון.'; return; }
-    saved.textContent = reg?.installing ? 'שומר את הסידור בטלפון…' : 'הסידור עוד לא נשמר.';
+    if (reg?.active) { saved.textContent = '✓ שמור בטלפון.'; return; }
+    saved.textContent = reg?.installing ? 'שומר עכשיו…' : '';
     setTimeout(report, 1500);
   };
   report();

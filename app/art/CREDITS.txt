@@ -1,0 +1,6 @@
+Background manuscript images (both in the public domain, from Wikimedia Commons):
+- "ShabaziMS.jpg": a page of a Tiklal prayer book in the hand of Rabbi Shalom Shabazi, 1676.
+  https://commons.wikimedia.org/wiki/File:ShabaziMS.jpg
+- "More-Nevuchim-Yemenite-manuscipt.jpg": a Yemenite manuscript of Maimonides' Guide of the Perplexed, 13th-14th century.
+  https://commons.wikimedia.org/wiki/File:More-Nevuchim-Yemenite-manuscipt.jpg
+They were recoloured as light blue ink on a clear background (manuscript.webp).

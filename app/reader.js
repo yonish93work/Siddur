@@ -50,7 +50,18 @@ export function openReader(plan, options) {
   document.body.classList.add('reading');
   const start = options.startAt ? entries.findIndex(e => e.n === options.startAt) : 0;
   show(Math.max(0, start), 0);
-  navigator.wakeLock?.request('screen').then(l => { wakeLock = l; }, () => {});
+  keepAwake();
+  if (options.toast) {
+    const t = Object.assign(document.createElement('div'), { className: 'toast', textContent: options.toast });
+    t.setAttribute('role', 'status');
+    $('reader').append(t);
+    setTimeout(() => t.remove(), 4500);
+  }
+}
+
+// Keep the screen on while praying, if the user wants it (settings: "מסך פעיל") and the phone allows it.
+function keepAwake() {
+  if (state && state.keepAwake !== false) navigator.wakeLock?.request('screen').then(l => { wakeLock = l; }, () => {});
 }
 
 const twoUp = () => innerWidth > innerHeight && innerWidth >= 560;
@@ -294,6 +305,7 @@ export function closeReader() {
   $('r-pages').replaceChildren();
   $('r-pages').classList.remove('zoomed');
   $('reader').hidden = true;
+  $('reader').querySelector('.toast')?.remove();
   document.body.classList.remove('reading', 'night');
 }
 
@@ -362,6 +374,6 @@ function toggleZoom(clientX, clientY) {
     timer = setTimeout(() => { if (state) { state.busy = false; show(state.at, 0); } }, 200);
   });
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && state) navigator.wakeLock?.request('screen').then(l => { wakeLock = l; }, () => {});
+    if (!document.hidden && state) keepAwake();
   });
 })();
