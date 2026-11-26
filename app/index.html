@@ -14,7 +14,8 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="preload" href="fonts/frank-ruhl-libre-hebrew-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/frank-ruhl-libre-hebrew-900-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/heebo-hebrew-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -29,27 +30,27 @@
 
   <section id="reader" hidden>
     <header class="rbar">
-      <button type="button" id="r-back" class="icon" aria-label="חזרה">→</button>
+      <button type="button" id="r-back" class="icon" aria-label="חזרה"></button>
       <div class="rtitle"><b id="r-title"></b><span id="r-where"></span></div>
-      <button type="button" id="r-night" class="icon" aria-label="מצב לילה" aria-pressed="false">☾</button>
-      <button type="button" id="r-menu" class="icon" aria-label="מעבר מהיר ותזכורות">☰</button>
+      <button type="button" id="r-night" class="icon" aria-label="מצב לילה" aria-pressed="false"></button>
+      <button type="button" id="r-menu" class="icon" aria-label="מעבר מהיר ותזכורות"></button>
     </header>
     <div id="r-why" class="rwhy" hidden></div>
     <div id="r-notes" class="rnotes" hidden></div>
     <div id="r-pages" class="rpages"></div>
     <footer class="rfoot">
-      <button type="button" id="r-prev" class="turn" aria-label="העמוד הקודם">→</button>
-      <span id="r-pos"></span>
-      <button type="button" id="r-next" class="turn" aria-label="העמוד הבא">←</button>
+      <button type="button" id="r-prev" class="turn" aria-label="העמוד הקודם"></button>
+      <div id="r-place" class="rplace"><span id="r-pos"></span><span class="prog" aria-hidden="true"><i id="r-prog"></i></span></div>
+      <button type="button" id="r-next" class="turn" aria-label="העמוד הבא"></button>
     </footer>
     <div id="r-panel" class="rpanel" hidden></div>
   </section>
 
   <nav id="nav" class="nav">
-    <button type="button" data-go="home"><span class="ni" aria-hidden="true">🕯</span>תפילה</button>
-    <button type="button" data-go="calendar"><span class="ni" aria-hidden="true">📅</span>לוח שנה</button>
-    <button type="button" data-go="browse"><span class="ni" aria-hidden="true">📖</span>תוכן העניינים</button>
-    <button type="button" data-go="settings"><span class="ni" aria-hidden="true">⚙</span>הגדרות</button>
+    <button type="button" data-go="home"><span class="ni" aria-hidden="true"></span>תפילה</button>
+    <button type="button" data-go="calendar"><span class="ni" aria-hidden="true"></span>לוח שנה</button>
+    <button type="button" data-go="browse"><span class="ni" aria-hidden="true"></span>תוכן העניינים</button>
+    <button type="button" data-go="settings"><span class="ni" aria-hidden="true"></span>הגדרות</button>
   </nav>
   <script type="module" src="app.js"></script>
 </body>

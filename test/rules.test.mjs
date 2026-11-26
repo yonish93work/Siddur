@@ -178,3 +178,20 @@ test('jump places and painted boxes point at real places', async () => {
     for (const [x0, y0, x1, y1] of rects) assert.ok(x0 >= 0 && y0 >= 0 && x1 <= 595 && y1 <= 842 && x1 > x0 && y1 > y0, `${prayer}.${m}: box outside the page`);
   }
 });
+
+test('calendar squares: every main day gets a short tag (10 years, Israel and abroad)', async () => {
+  const { eventsBetween } = await import('../app/logic/events.js');
+  const { cellLabel } = await import('../app/logic/labels.js');
+  for (const il of [true, false]) {
+    for (let y = 5785; y < 5795; y++) {
+      const first = new HDate(1, m.TISHREI, y), last = new HDate(new HDate(1, m.TISHREI, y + 1).abs() - 1);
+      for (const [a, d] of eventsBetween(first.greg(), last.greg(), { il })) {
+        const L = cellLabel(d.events.filter(e => e.kind !== 'time' && e.kind !== 'omer'));
+        if (!L.kind) continue;
+        // One or two short words fit in the square on a small phone (checked by eye on six real months).
+        assert.ok(L.tag.length <= 8, `${new HDate(a)}: tag "${L.tag}" is too long`);
+        assert.ok(L.detail.length <= 22, `${new HDate(a)}: detail "${L.detail}" is too long`);
+      }
+    }
+  }
+});

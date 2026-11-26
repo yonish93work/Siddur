@@ -1,7 +1,10 @@
 // The reading screen: one page at a time like a book (two side by side when the phone lies sideways),
 // turned by a swipe, a tap on the page edge or the buttons. Today's additions are painted yellow, and what is
 // printed next to them but not said today is painted grey. Double-tap zooms in; the moon button dims the pages.
+import { ICONS } from './icons.js';
 const $ = id => document.getElementById(id);
+// Drawn icons on the reader's buttons (back points right: Hebrew reads right to left).
+for (const [id, key] of [['r-back', 'chevronRight'], ['r-menu', 'menu'], ['r-prev', 'chevronRight'], ['r-next', 'chevron']]) $(id).innerHTML = ICONS[key];
 
 let pdfjs = null, pdfPromise = null;
 
@@ -245,7 +248,10 @@ const label = e => state.idx.label(e.n) ?? `דף ${e.n}`;
 function updateBars(list) {
   const s = state, first = list[0], last = list.at(-1);
   $('r-where').textContent = s.plan.segments[first.seg].title;
-  $('r-pos').textContent = `עמוד ${list.length > 1 ? `${label(first)}–${label(last)}` : label(first)} · ${s.entries.indexOf(last) + 1} מתוך ${s.entries.length}`;
+  const at = s.entries.indexOf(last) + 1;
+  $('r-pos').textContent = `עמוד ${list.length > 1 ? `${label(first)}–${label(last)}` : label(first)}`;
+  $('r-place').title = `${at} מתוך ${s.entries.length}`;
+  $('r-prog').style.width = `${Math.round(at / s.entries.length * 100)}%`;
   $('r-prev').disabled = s.at === 0;
   $('r-next').disabled = s.at + step() >= s.entries.length;
   const notes = list.filter(e => e.first).flatMap(e => s.plan.notes?.get(e.n) ?? []);
@@ -303,7 +309,7 @@ function fillPanel() {
 function setNight(on, save = true) {
   document.body.classList.toggle('night', on);
   $('r-night').setAttribute('aria-pressed', String(on));
-  $('r-night').textContent = on ? '☀' : '☾';
+  $('r-night').innerHTML = on ? ICONS.sun : ICONS.moon;
   if (save) state?.onNight?.(on);
 }
 

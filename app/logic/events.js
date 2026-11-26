@@ -29,18 +29,29 @@ export function eventsBetween(first, last, { il = true, walled = false, place } 
     // Leave out the many small civic memorial days; keep the national ones (Independence Day, Memorial Day...).
     if ((f & flags.MODERN_HOLIDAY) && (f & flags.IL_ONLY)) continue;
     if (/Selichot|LaBehemot/.test(e.getDesc())) continue;
-    const text = e.render('he-x-NoNikud').replace(/^חנוכה: (.+)$/, 'חנוכה, $1').replace(/ \d{4}$/, '');
+    // hebcal writes the postponed Tisha B'Av with its brackets mixed up: "(תשעה באב (נדחה".
+    const text = e.render('he-x-NoNikud').replace(/^חנוכה: (.+)$/, 'חנוכה, $1').replace(/ \d{4}$/, '').replace(/^\(תשעה באב \(נדחה$/, 'תשעה באב (נדחה)');
+    // Chanukah: hebcal puts the candles on the evening before (24 Kislev = "first candle"). The calendar marks the
+    // days themselves (25 Kislev = "חנוכה א׳", added below), and the candles become a note for that evening.
+    if (/^חנוכה, /.test(text)) {
+      const n = text.match(/^חנוכה, (\S+) נרו?ת?$/)?.[1];
+      if (n) day(e.getDate().abs()).events.push({ text: `נר ${n} של חנוכה בערב`, kind: 'candles' });
+      continue;
+    }
     // All the days of Pesach, Sukkot and Chanukah count as a holiday in the calendar (red).
-    const festive = /חוה״מ|הושענא רבה|^חנוכה/.test(text) || (f & flags.CHANUKAH_CANDLES);
-    day(e.getDate().abs()).events.push({ text, kind: /\d:\d\d/.test(text) ? 'time' : festive ? 'holiday' : kindOf(f) });
+    // Purim counts as a holiday too; Tisha B'Av is a fast (not a holiday), and the day before it an ordinary day.
+    const festive = /חוה״מ|הושענא רבה|^חנוכה|^פורים$|^שושן פורים$/.test(text) || (f & flags.CHANUKAH_CANDLES);
+    const kind = /\d:\d\d/.test(text) ? 'time' : /^תשעה באב/.test(text) ? 'fast' : /^ערב /.test(text) ? 'minor' : festive ? 'holiday' : kindOf(f);
+    day(e.getDate().abs()).events.push({ text, kind });
   }
   for (let a = new HDate(first).abs(); a <= new HDate(last).abs(); a++) {
     const d = day(a), info = dayInfo(new HDate(a), { il, walled });
     d.info = info;
     if (info.omer) d.events.push({ text: `${info.omer} בעומר`, kind: 'omer' });
-    if (info.fast === 'av' && !d.events.some(x => x.kind === 'holiday')) d.events.unshift({ text: 'תשעה באב', kind: 'holiday' });
+    if (info.chanukah) d.events.unshift({ text: `חנוכה, יום ${'אבגדהוזח'[info.chanukah - 1]}׳`, kind: 'holiday' });
+    if (info.fast === 'av' && !d.events.some(x => /^תשעה באב/.test(x.text))) d.events.unshift({ text: 'תשעה באב', kind: 'fast' });
   }
-  const order = ['holiday', 'fast', 'rc', 'modern', 'minor', 'shabbat', 'parsha', 'omer', 'time'];
+  const order = ['holiday', 'fast', 'rc', 'modern', 'minor', 'shabbat', 'parsha', 'candles', 'omer', 'time'];
   for (const d of out.values()) d.events.sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
   return out;
 }

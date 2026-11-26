@@ -22,4 +22,19 @@ export const ICONS = {
   compass: svg('<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5 13.4 13.4 8.5 15.5l2.1-4.9z"/><circle cx="12" cy="12" r=".8" fill="currentColor"/>'),
   chevron: svg('<path d="M14.5 6 8.5 12l6 6" stroke-width="2.4"/>'),
   clock: svg('<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>'),
+  chevronRight: svg('<path d="M9.5 6l6 6-6 6" stroke-width="2.2"/>'),
+  chevronDown: svg('<path d="M6 9l6 6 6-6" stroke-width="2.4"/>'),
+  menu: svg('<path d="M5 7h14M5 12h14M5 17h14" stroke-width="2"/>'),
+  moon: svg('<path d="M15.5 3.5a8.5 8.5 0 1 0 5 13A7 7 0 0 1 15.5 3.5z" stroke-width="1.8"/>'),
+  sun: svg('<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/>'),
+  search: svg('<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>'),
+  pin: svg('<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2"/>'),
+  phone: svg('<rect x="6.5" y="3" width="11" height="18" rx="1.8"/><path d="M11 18h2"/>'),
+  share2: svg('<path d="M12 3v12M7.5 7.5 12 3l4.5 4.5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/>'),
 };
+
+// Magen David, the app's emblem (shape A of the approved design): two triangles with a thin inner line.
+// small = without the inner lines, for small sizes where they would blur.
+export const STAR = (small = false) => `<svg viewBox="0 0 40 40" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linejoin="round">
+<path d="M20 3 35 29H5z" stroke-width="${small ? 2.8 : 2.4}"/><path d="M20 37 5 11h30z" stroke-width="${small ? 2.8 : 2.4}"/>
+${small ? '' : '<path d="M20 8.5 30.4 26.5H9.6z" stroke-width=".9" opacity=".75"/><path d="M20 31.5 9.6 13.5h20.8z" stroke-width=".9" opacity=".75"/>'}</g></svg>`;

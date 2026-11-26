@@ -22,6 +22,9 @@ for (const f of ["index.html", "style.css", "manifest.webmanifest", "icons", "ar
 mkdirSync(join(DIST, "fonts"), { recursive: true });
 for (const w of [400, 700, 900]) cpSync(at("node_modules", "@fontsource", "frank-ruhl-libre", "files", `frank-ruhl-libre-hebrew-${w}-normal.woff2`), join(DIST, "fonts", `frank-ruhl-libre-hebrew-${w}-normal.woff2`));
 cpSync(at("node_modules", "@fontsource", "frank-ruhl-libre", "LICENSE"), join(DIST, "fonts", "LICENSE.txt"));
+// Heebo for the buttons and small text: the Hebrew letters, and the Latin file for the digits.
+for (const s of ['hebrew', 'latin']) for (const w of [400, 500, 600, 700]) cpSync(at("node_modules", "@fontsource", "heebo", "files", `heebo-${s}-${w}-normal.woff2`), join(DIST, "fonts", `heebo-${s}-${w}-normal.woff2`));
+cpSync(at("node_modules", "@fontsource", "heebo", "LICENSE"), join(DIST, "fonts", "LICENSE-heebo.txt"));
 cpSync(at('source', 'siddur.pdf'), join(DIST, 'siddur.pdf'));
 // The "legacy" build of PDF.js also runs on older phones.
 for (const f of ['pdf.min.mjs', 'pdf.worker.min.mjs']) cpSync(at('node_modules', 'pdfjs-dist', 'legacy', 'build', f), join(DIST, 'vendor', f));
@@ -38,7 +41,7 @@ const code = js.outputFiles.find(f => f.path.endsWith('app.js')).text;
 for (const f of js.outputFiles) if (f.path.endsWith('.txt')) writeFileSync(join(DIST, 'app.js.LEGAL.txt'), f.text);
 const swSource = readFileSync(at('app', 'sw.js'), 'utf8');
 const version = sha(JSON.stringify(listing()) + code + swSource).slice(0, 8);
-writeFileSync(join(DIST, 'app.js'), code.replace('@@VERSION@@', version));
+writeFileSync(join(DIST, 'app.js'), code.replaceAll('@@VERSION@@', version));
 writeFileSync(join(DIST, 'sw.js'), swSource.replace('__VERSION__', version).replace('__FILES__', JSON.stringify(listing())));
 writeFileSync(join(DIST, '.nojekyll'), ''); // GitHub Pages: serve the files exactly as they are
 

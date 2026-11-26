@@ -5,7 +5,9 @@ import { dayInfo } from './logic/calendar.js';
 import { PRAYERS, reminders, dayTitles } from './logic/prayers.js';
 import { HIGHLIGHTS } from './logic/highlights.js';
 import { ANCHORS } from './logic/anchors.js';
-import { ICONS } from './icons.js';
+import { ICONS, STAR } from './icons.js';
+import { cellLabel } from './logic/labels.js';
+import { skyOf, applySky } from './sky.js';
 import { pageIndex } from './logic/pages.js';
 import { buildMenu } from './logic/sections.js';
 import { eventsBetween } from './logic/events.js';
@@ -49,6 +51,15 @@ const gregText = d => d.toLocaleDateString('he-IL', { day: 'numeric', month: 'lo
 const goArrow = () => { const s = el('span', { className: 'go', ariaHidden: 'true' }); s.innerHTML = ICONS.chevron; return s; };
 // A drawn icon inside a round gold-edged medallion.
 const medal = key => { const s = el('span', { className: 'medal' }); s.innerHTML = ICONS[key] ?? ''; return s; };
+const icon = key => { const s = el('span', { ariaHidden: 'true', style: 'display:contents' }); s.innerHTML = ICONS[key] ?? ''; return s; };
+// Today's main times as { name: Date }.
+const zmanim = (date, p = place()) => Object.fromEntries(zmanimList(date, p));
+
+// The sky at the top of the screens follows the time of day where the user is.
+let updateSky = function () {
+  const p = place(), z = zmanim(civilDate(new Date(), p.tz), p);
+  applySky(skyOf(new Date(), { alot: z['עלות השחר'], sunrise: z['זריחה'], sunset: z['שקיעה'], tzeit: z['צאת הכוכבים'] }));
+}
 
 // ---- opening a prayer or a section
 // The day's facts, plus a mourner / groom / circumcision chosen for that date (no Tachanun, p. 68).
@@ -157,11 +168,12 @@ function prayerDates() {
 }
 const holyName = (prayer, civil) => { const i = dayInfo(prayerDate(prayer, civil), opts()); return i.holy ? (i.yomTov ?? 'שבת') : null; };
 
+// The three prayers side by side; the one of this hour stands out. Shabbat and Yom Tov prayers are not shown.
 function prayerButtons(dates, current) {
-  return el('div', { className: 'prayers' }, ['shacharit', 'mincha', 'arvit'].map(prayer => {
+  return el('div', { className: 'seg', role: 'group', ariaLabel: 'תפילות' }, ['shacharit', 'mincha', 'arvit'].map(prayer => {
     const civil = dates[prayer], holy = holyName(prayer, civil), d = prayerDate(prayer, civil);
-    const b = el('button', { type: 'button', className: `prayer${prayer === current ? ' current' : ''}`, onclick: () => openPrayer(prayer, civil) },
-      medal(prayer),
+    const b = el('button', { type: 'button', className: prayer === current ? 'on' : '', onclick: () => openPrayer(prayer, civil) },
+      icon(prayer),
       el('b', { textContent: PRAYERS[prayer].name }),
       el('small', { textContent: holy ? `${holy}: לא מוצג` : `${prayer === 'arvit' ? 'ליל ' : ''}${weekdayName(prayer === 'arvit' ? d.greg() : civil)}` }));
     b.disabled = !!holy;
@@ -169,22 +181,34 @@ function prayerButtons(dates, current) {
   }));
 }
 
-function timesCard(date, compact = false) {
+function timesCard(date) {
   const p = place();
-  const rows = zmanimList(date, p).filter(([n]) => !compact || !n.includes('מג"א'));
   return el('div', { className: 'card times' },
-    el('div', { className: 'where' }, el('b', { textContent: `זמני היום · ${p.name}` }), btn('שינוי מקום', () => go('settings'), 'link')),
-    el('ul', { className: 'list' }, rows.map(([n, t]) => el('li', { className: 'plain' }, el('span', { textContent: n }), el('span', { textContent: time(t) })))));
+    el('div', { className: 'where' }, el('h2', { textContent: 'זמני היום' }), el('span', {}, `${p.name} · `, btn('שינוי', () => go('settings'), 'link'))),
+    el('ul', { className: 'list' }, zmanimList(date, p).map(([n, t]) => el('li', { className: 'plain' }, el('span', { textContent: n }), el('span', { textContent: time(t) })))));
 }
 
-// On the home screen the day's times open with a tap (the calendar always shows them).
-let timesOpen = false;
-function timesButton(date) {
-  const box = el('div', { hidden: !timesOpen, style: 'margin-top:10px' }, timesCard(date));
-  const b = el('button', { type: 'button', className: 'timesbtn', onclick: () => { timesOpen = !timesOpen; box.hidden = !timesOpen; b.setAttribute('aria-expanded', String(timesOpen)); } },
-    medal('clock'), el('span', {}, el('b', { textContent: 'זמני היום' }), el('small', { textContent: `${place().name} · זריחה, שקיעה ועוד` })), Object.assign(el('span', { className: 'chev' }), { innerHTML: ICONS.chevron }));
-  b.setAttribute('aria-expanded', String(timesOpen));
-  return el('div', {}, b, box);
+// The arc of the sun over the day: sunrise on the right, midday at the top, sunset on the left. The bright part
+// is the day that has passed; in the middle, how long until the next time people watch for.
+function sunArc(date, live) {
+  const z = zmanim(date), now = Date.now();
+  const rise = z['זריחה']?.getTime(), set = z['שקיעה']?.getTime();
+  const NS = 'http://www.w3.org/2000/svg';
+  const svgEl = (tag, attrs) => { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); return n; };
+  const svg = svgEl('svg', { viewBox: '0 0 320 150', 'aria-hidden': 'true' });
+  svg.innerHTML = '<defs><radialGradient id="sunglow"><stop offset="0" stop-color="#fff6d6"/><stop offset=".6" stop-color="#f6cf72"/><stop offset="1" stop-color="#f6cf72" stop-opacity="0"/></radialGradient></defs>';
+  svg.append(svgEl('line', { x1: 6, y1: 138, x2: 314, y2: 138, class: 'faint', 'stroke-width': 1 }),
+    svgEl('path', { d: 'M24 138 A136 136 0 0 1 296 138', fill: 'none', class: 'faint', 'stroke-width': 2.5, 'stroke-dasharray': '2 7', 'stroke-linecap': 'round' }),
+    svgEl('line', { x1: 160, y1: 2, x2: 160, y2: 10, class: 'faint', 'stroke-width': 1.5 }));
+  if (live && now > rise && now < set) {
+    const a = Math.PI * (now - rise) / (set - rise), x = (160 + 136 * Math.cos(a)).toFixed(1), y = (138 - 136 * Math.sin(a)).toFixed(1);
+    svg.append(svgEl('path', { d: `M296 138 A136 136 0 0 0 ${x} ${y}`, fill: 'none', class: 'lit', 'stroke-width': 3.5, 'stroke-linecap': 'round' }),
+      svgEl('circle', { cx: x, cy: y, r: 22, fill: 'url(#sunglow)' }), svgEl('circle', { cx: x, cy: y, r: 9, fill: '#fff3cc' }));
+  }
+  const next = live ? nextTime() : null;
+  return el('section', { className: 'arc', ariaLabel: 'מהלך היום' }, svg,
+    next ? el('div', { className: 'count' }, el('span', { textContent: `${next.name} בעוד` }), el('b', { className: 'gold', textContent: next.left })) : '',
+    el('div', { className: 'times' }, [['זריחה', z['זריחה']], ['חצות', z['חצות היום']], ['שקיעה', z['שקיעה']]].map(([n, t]) => el('span', {}, el('b', { textContent: time(t) }), n))));
 }
 
 // ---- home
@@ -195,55 +219,66 @@ function renderHome() {
   const current = dates.current, holyNow = current && holyName(current, dates[current]);
   const step = n => { chosen = addDays(chosen ?? dates.today, n); if (iso(chosen) === iso(dates.today)) chosen = null; renderHome(); };
 
+  const p = place(), dayDate = dates.isToday ? dates.today : chosen, z = zmanim(dayDate);
   let nowBox = '';
-  if (current && holyNow) nowBox = el('div', { className: 'card' }, el('b', { textContent: holyNow }), el('p', { className: 'sub', textContent: 'האפליקציה אינה מציגה תפילות בשבת וביום טוב.' }));
+  if (current && holyNow) nowBox = el('div', { className: 'card holycard' }, el('b', { textContent: holyNow }), el('p', { className: 'sub', textContent: 'האפליקציה אינה מציגה תפילות בשבת וביום טוב.' }));
   else if (current) {
     const d = prayerDate(current, dates[current]);
-    nowBox = el('button', { type: 'button', className: 'now', onclick: () => openPrayer(current, dates[current]) },
+    // Under the name: the date, and the time that matters for this prayer.
+    const key = { shacharit: ['סוף זמן תפילה (גר"א)', 'סוף זמן תפילה'], mincha: ['שקיעה', 'שקיעה'] }[current];
+    const line = key && z[key[0]]?.getTime() > Date.now() ? `${heb(d)} · ${key[1]} ${time(z[key[0]])}` : `${current === 'arvit' ? 'ליל ' : ''}${heb(d)}`;
+    nowBox = el('button', { type: 'button', className: 'nowcard', onclick: () => openPrayer(current, dates[current]) },
       medal(current),
-      el('span', {}, el('span', { textContent: 'התפילה עכשיו' }), el('div', { className: 'big', textContent: PRAYERS[current].name }), el('span', { textContent: `${current === 'arvit' ? 'ליל ' : ''}${heb(d)}` })),
+      el('span', { className: 'txt' }, el('small', { textContent: 'התפילה עכשיו' }), el('b', { className: 'gold', textContent: PRAYERS[current].name }), el('span', { textContent: line })),
       goArrow());
   }
 
-  const sayPrayer = current && !holyNow ? current : ['shacharit', 'mincha', 'arvit'].find(x => !holyName(x, dates[x]));
   const resume = loadResume();
+  const stepBtn = (n, key, label) => { const b = el('button', { type: 'button', className: 'daystep', onclick: () => step(n), ariaLabel: label }); b.innerHTML = ICONS[key]; return b; };
+  const afterSunset = dates.isToday && iso(hd.greg()) !== iso(dates.today);
+  const times = el('div', { hidden: !timesOpen }, timesCard(dayDate));
+  const timesLink = btn(timesOpen ? 'הסתר את זמני היום' : 'כל זמני היום', () => { timesOpen = !timesOpen; times.hidden = !timesOpen; timesLink.textContent = timesOpen ? 'הסתר את זמני היום' : 'כל זמני היום'; }, 'link');
+  const star = el('span', { className: 'medal brand' });
+  star.innerHTML = STAR();
   $('home').replaceChildren(
-    el('header', { className: 'hero' },
-      el('div', { className: 'cartouche' }, el('b', { textContent: 'תפילת שלמה' })),
-      el('div', { className: 'ribbon' }, el('span', { textContent: 'נוסח תימן שאמי' })),
-      el('div', { className: 'date' },
-        el('h1', { textContent: `${weekdayName(hd.greg())}, ${heb(hd)}` }),
-        el('p', { className: 'sub', textContent: `${gregText(hd.greg())}${dates.isToday && iso(hd.greg()) !== iso(dates.today) ? ' · היום העברי מתחיל בשקיעה' : ''}` })),
-      titles.length ? el('div', { className: 'chips' }, titles.map(t => el('span', { className: 'chip', textContent: t }))) : '',
-      dates.isToday ? countdown() : '',
-      el('div', { className: 'daynav' }, btn('→ יום קודם', () => step(-1), ''), chosen ? btn('חזרה להיום', () => { chosen = null; renderHome(); }, '') : '', btn('יום הבא ←', () => step(1), ''))),
-    installCard(),
-    resume ? el('button', { type: 'button', className: 'resume', onclick: () => reopen(resume) },
-      medal('back'), el('span', {}, el('b', { textContent: 'להמשיך מאיפה שעצרתי' }), el('small', { textContent: `${resume.title}${resume.label ? `, עמוד ${resume.label}` : ''}` }))) : '',
-    nowBox ? sec(dates.isToday ? 'עכשיו' : '') : '', nowBox,
-    sec(dates.isToday ? 'תפילות היום' : `תפילות ל${weekdayName(chosen)}`),
-    prayerButtons(dates, current),
-    sec('גישה מהירה'), tiles(info),
-    specialCard(hd.greg()),
-    timesButton(dates.isToday ? dates.today : chosen),
-    sec('שיתוף'), shareCard(),
-    el('p', { className: 'draft', textContent: 'גרסת ניסיון: החוקים נכתבו לפי ההוראות שבסידור, ועדיין לא אומתו בידי בקיא במנהג. בכל ספק יש לנהוג לפי הסידור המודפס והרב.' }),
+    el('header', { className: 'hero home-hero' },
+      el('div', { className: 'fx glow' }), el('div', { className: 'fx sun' }), el('div', { className: 'fx ground' }),
+      star,
+      el('h1', { className: 'gold', textContent: 'תפילת שלמה' }),
+      el('div', { className: 'tagline' }, el('i'), el('span', { textContent: 'נוסח תימן שאמי' }), el('i')),
+      sunArc(dayDate, dates.isToday)),
+    el('div', { className: 'stack lift' },
+      el('section', { className: 'card daycard', ariaLabel: 'היום' },
+        stepBtn(-1, 'chevronRight', 'יום קודם'),
+        el('div', { className: 'when' },
+          el('b', { textContent: hd.renderGematriya(true) }),
+          el('small', { textContent: `${weekdayName(hd.greg())} · ${hd.greg().toLocaleDateString('he-IL', { day: 'numeric', month: 'long' })}${afterSunset ? ' · מהשקיעה' : ''}` }),
+          titles.length ? el('div', { className: 'chips' }, titles.map(t => el('span', { className: 'chip', textContent: t }))) : '',
+          chosen ? btn('חזרה להיום', () => { chosen = null; renderHome(); }, 'link back') : ''),
+        stepBtn(1, 'chevron', 'יום הבא')),
+      resume ? el('button', { type: 'button', className: 'card resume', onclick: () => reopen(resume) },
+        medal('back'), el('span', {}, el('b', { textContent: 'להמשיך מאיפה שעצרתי' }), el('small', { textContent: `${resume.title}${resume.label ? `, עמוד ${resume.label}` : ''}` }))) : '',
+      nowBox,
+      prayerButtons(dates, current),
+      installCard(),
+      el('div', { className: 'head' }, el('h2', { textContent: 'גישה מהירה' }), timesLink),
+      tiles(info),
+      times,
+      specialCard(hd.greg()),
+      shareCard(),
+      el('p', { className: 'draft', textContent: 'גרסת ניסיון: החוקים נכתבו לפי ההוראות שבסידור, ועדיין לא אומתו בידי בקיא במנהג. בכל ספק יש לנהוג לפי הסידור המודפס והרב.' })),
   );
 }
+let timesOpen = false;
 
-// "In 35 minutes: sunset" - the next of the times people most often watch for.
-function countdown() {
+// The next of the times people most often watch for, and how long until it: { name, left: "35 דק׳" or "1:20" }.
+function nextTime() {
   const now = Date.now(), p = place(), today = civilDate(new Date(), p.tz);
-  const watch = ['סוף זמן קריאת שמע (גר"א)', 'סוף זמן תפילה (גר"א)', 'חצות היום', 'מנחה גדולה', 'פלג המנחה', 'שקיעה', 'צאת הכוכבים'];
-  const list = [...zmanimList(today, p), ...zmanimList(addDays(today, 1), p).map(([n, t]) => [n, t])]
-    .filter(([n, t]) => (watch.includes(n) || n === 'עלות השחר') && t && t.getTime() > now);
-  const nextOne = list[0];
-  if (!nextOne) return '';
-  const mins = Math.round((nextOne[1].getTime() - now) / 60000);
-  const text = mins < 60 ? `${mins} דקות` : `${Math.floor(mins / 60)} שעות ו-${mins % 60} דקות`;
-  const c = el('div', { className: 'count' }, el('span', {}), `${nextOne[0]} בעוד ${mins === 1 ? 'דקה' : text} (${time(nextOne[1])})`);
-  c.firstChild.innerHTML = ICONS.clock;
-  return c;
+  const watch = ['עלות השחר', 'זריחה', 'סוף זמן קריאת שמע (גר"א)', 'סוף זמן תפילה (גר"א)', 'חצות היום', 'מנחה גדולה', 'פלג המנחה', 'שקיעה', 'צאת הכוכבים'];
+  const nextOne = [...zmanimList(today, p), ...zmanimList(addDays(today, 1), p)].find(([n, t]) => watch.includes(n) && t && t.getTime() > now);
+  if (!nextOne) return null;
+  const mins = Math.max(1, Math.round((nextOne[1].getTime() - now) / 60000));
+  return { name: nextOne[0].replace(/ \(גר"א\)$/, ''), left: mins < 60 ? `${mins} דק׳` : `${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, '0')}` };
 }
 
 // A mourner, a groom or a circumcision today: no Tachanun (p. 68); in a mourner's house also Psalm 49 (p. 98).
@@ -292,21 +327,22 @@ function tiles(info) {
   const tomorrowChanukah = dayInfo(new HDate(info.d.abs() + 1), opts()).chanukah;
   const seasonal = [
     (info.chanukah || tomorrowChanukah) && ['הדלקת נרות', 'candle', 'נרות חנוכה'],
-    info.megillah && ['מגילת אסתר', 'scroll', 'פורים'],
-    info.omer && ['ספירת העומר', 'omer', `היום ${info.omer} בעומר`],
-    info.ashmorot && ['אשמורות', 'book', 'סליחות'],
-    info.levana && ['ברכת הלבנה', 'moonStar', ''],
-    info.fast === 'av' && ['מגילת איכה', 'scroll', 'תשעה באב'],
+    info.megillah && ['מגילת אסתר', 'scroll', 'מגילת אסתר'],
+    info.omer && ['ספירת העומר', 'omer', `ספירת העומר`],
+    info.ashmorot && ['אשמורות', 'book', 'אשמורות'],
+    info.levana && ['ברכת הלבנה', 'moonStar', 'ברכת הלבנה'],
+    info.fast === 'av' && ['מגילת איכה', 'scroll', 'מגילת איכה'],
   ].filter(Boolean);
-  const daily = [['ברכת המזון', 'cup', ''], ['מעין שלוש', 'grapes', ''], ['תפלת הדרך', 'road', ''], ['קריאת שמע על המטה', 'bed', '']];
-  const tile = (title, icon, sub, onclick, wide) => el('button', { type: 'button', className: `tile${wide ? ' wide' : ''}`, onclick }, medal(icon), el('span', {}, el('b', { textContent: title }), sub ? el('small', { textContent: sub }) : ''));
-  const fromMenu = ([part, icon, sub]) => { const e = sectionByTitle(part); return e && tile(part === 'מעין שלוש' ? 'מעין שלוש' : e.title.replace(/^חנוכה: /, ''), icon, sub || `עמ' ${idx.label(e.from) ?? ''}`, () => openRange(e.title, e.from, e.to)); };
+  const daily = [['ברכת המזון', 'cup', 'ברכת המזון'], ['מעין שלוש', 'grapes', 'מעין שלוש'], ['תפלת הדרך', 'road', 'תפילת הדרך'], ['קריאת שמע על המטה', 'bed', 'שמע על המטה']];
+  // A round medallion with a short name under it; the full name and page are read out by screen readers.
+  const tile = (title, key, onclick, full = title) => el('button', { type: 'button', className: 'q', onclick, title: full, ariaLabel: full }, medal(key), el('span', { textContent: title }));
+  const fromMenu = ([part, key, name]) => { const e = sectionByTitle(part); return e && tile(name, key, () => openRange(e.title, e.from, e.to), `${e.title}, עמוד ${idx.label(e.from) ?? ''}`); };
   // "Asher Yatzar" is printed on the first page of Birchot Hashachar (p. 9).
-  const asher = tile('אשר יצר', 'jug', "עמ' 9", () => openRange('אשר יצר', idx.first('9'), idx.first('9')));
+  const asher = tile('אשר יצר', 'jug', () => openRange('אשר יצר', idx.first('9'), idx.first('9')), 'אשר יצר, עמוד 9');
   const list = [...seasonal.map(fromMenu), ...daily.slice(0, 1).map(fromMenu), asher, ...daily.slice(1).map(fromMenu)].filter(Boolean);
-  list.push(tile('מצפן לכותל', 'compass', 'כיוון התפילה', openCompass));
-  list.push(tile('כל התפילות', 'book', 'תוכן העניינים', () => go('browse'), list.length % 2 === 0));
-  return el('div', { className: 'tiles' }, list);
+  list.push(tile('מצפן לכותל', 'compass', openCompass));
+  list.push(tile('כל התפילות', 'book', () => go('browse'), 'כל התפילות: תוכן העניינים'));
+  return el('div', { className: 'quick' }, list);
 }
 
 // ---- compass: which way to face to pray towards the Western Wall, from where the phone is
@@ -333,7 +369,7 @@ async function openCompass() {
   const help = el('div', { className: 'card', hidden: true });
   const close = () => { compassStop?.(); compassStop = null; box.remove(); };
   const box = el('div', { className: 'overlay compass' },
-    el('header', { className: 'hero' }, el('h1', { textContent: 'מצפן לכותל' }), el('p', { className: 'sub', textContent: 'סובב את הטלפון עד שהחץ הזהוב מצביע ישר קדימה' })),
+    el('header', { className: 'hero' }, el('h1', { className: 'gold', textContent: 'מצפן לכותל' }), el('p', { className: 'sub', textContent: 'סובב את הטלפון עד שהחץ הזהוב מצביע ישר קדימה' })),
     dial, info, status, help,
     el('div', { style: 'display:flex;gap:10px;justify-content:center;margin-top:12px' }, btn('נסה שוב', () => { close(); openCompass(); }), btn('סגור', close, 'btn primary')));
   document.body.append(box);
@@ -381,13 +417,9 @@ async function openCompass() {
   setTimeout(() => { if (!got && box.isConnected) status.textContent = 'לא התקבל מצפן מהטלפון (במחשב אין מצפן). אפשר לכוון לפי המעלות: 0° הוא צפון.'; }, 3000);
 }
 const menuItem = e => el('li', {}, el('button', { type: 'button', className: 'item', onclick: () => openRange(e.title, e.from, e.to) },
-  el('span', { textContent: e.title }), el('span', { className: 'pg', textContent: idx.label(e.from) ? `עמ' ${idx.label(e.from)}` : '' })));
+  el('span', { textContent: e.title }), el('span', { className: 'pg', textContent: idx.label(e.from) ? `עמ׳ ${idx.label(e.from)}` : '' })));
 
 // ---- Hebrew calendar
-// Short names, so they fit in the small day squares.
-const short = t => t.replace(/^פרשת /, '').replace(/^ראש חודש .*/, 'ר״ח').replace(/^חנוכה, יום ח׳$/, 'חנוכה ח׳')
-  .replace(/^חנוכה, (\S+) נרו?ת?$/, 'חנוכה $1').replace(/^שבת מברכים.*/, 'מברכים').replace(/ \(חוה״מ\)/, '').replace(/^יום הזכרון.*/, 'יום הזכרון')
-  .replace(/^(צום גדליה|עשרה בטבת|שבעה עשר בתמוז|צום י״ז בתמוז)$/, 'צום').replace(/^תענית אסתר$/, 'תענית').replace(/^תענית בכורות$/, 'בכורות');
 let calMonth = null, calSel = null; // calMonth = HDate of the 1st of the month shown; calSel = absolute day picked
 
 function renderCalendar() {
@@ -414,40 +446,42 @@ function renderCalendar() {
   for (let dnum = 1; dnum <= days; dnum++) {
     const d = new HDate(dnum, m, y), a = d.abs(), info = ev.get(a)?.info ?? dayInfo(d, opts());
     const list = (ev.get(a)?.events ?? []).filter(e => e.kind !== 'time' && e.kind !== 'omer');
-    // The square takes the colour of the day's most important event: holiday, fast, Rosh Chodesh, national day.
-    const main = ['holiday', 'fast', 'rc', 'modern'].find(k => list.some(e => e.kind === k));
-    const cls = ['cell', main && `k-${main}`, d.getDay() === 6 && 'sat', info.noTachanun && d.getDay() !== 6 && 'notach', a === today.abs() && 'today', a === calSel && 'sel'].filter(Boolean).join(' ');
-    grid.append(el('button', { type: 'button', className: cls, onclick: () => { calSel = a; renderCalendar(); } },
-      el('span', { className: 'hd', textContent: d.renderGematriya(true).split(' ')[0] }),
+    // A coloured tag for the day's most important event ("חנוכה ב׳"), a detail line, and the portion (labels.js).
+    const L = cellLabel(list);
+    const cls = ['cell', L.kind && `k-${L.kind}`, d.getDay() === 6 && 'sat', info.noTachanun && d.getDay() !== 6 && 'notach', a === today.abs() && 'today', a === calSel && 'sel'].filter(Boolean).join(' ');
+    const name = d.renderGematriya(true).split(' ')[0];
+    grid.append(el('button', { type: 'button', className: cls, onclick: () => { calSel = a; renderCalendar(); }, ariaLabel: [name, ...list.map(e => e.text)].join(', ') },
+      el('span', { className: 'hd', textContent: name }),
       el('span', { className: 'gd', textContent: d.greg().getDate() }),
-      list.slice(0, 2).map(e => el('span', { className: `tag ${e.kind}`, textContent: short(e.text) }))));
+      L.tag ? el('span', { className: 'tag', textContent: L.tag }) : '',
+      L.detail ? el('span', { className: 'det', textContent: L.detail }) : '',
+      L.extra ? el('span', { className: 'ex', textContent: L.extra }) : ''));
   }
 
   const sel = new HDate(calSel), selEv = ev.get(calSel)?.events ?? [], civil = sel.greg();
   const dates = { shacharit: civil, mincha: civil, arvit: civil };
-  const day = el('div', { className: 'card day' },
-    el('h2', { textContent: `${weekdayName(civil)}, ${heb(sel)}` }),
-    el('p', { className: 'sub', textContent: gregText(civil) }),
-    selEv.length ? el('ul', { className: 'evs' }, selEv.map(e => el('li', {}, el('span', { className: `tag ${e.kind}`, textContent: e.text })))) : el('p', { className: 'sub', textContent: 'אין אירועים מיוחדים.' }),
+  const day = el('section', { className: 'card day', ariaLabel: 'היום שנבחר' },
+    el('div', { className: 'top' }, el('h2', { textContent: `${weekdayName(civil)}, ${heb(sel)}` }), el('span', { textContent: civil.toLocaleDateString('he-IL', { day: 'numeric', month: 'long' }) })),
+    selEv.length ? el('div', { className: 'evs' }, selEv.map(e => el('span', { className: e.kind, textContent: e.text }))) : el('p', { className: 'sub', textContent: 'אין אירועים מיוחדים.' }),
     ev.get(calSel)?.info?.noTachanun ? el('p', { className: 'sub', textContent: `אין תחנון: ${ev.get(calSel).info.noTachanun}` }) : '',
     prayerButtons(dates, null),
-  );
-  day.append(btn('פתח במסך התפילה', () => { chosen = iso(civil) === iso(civilDate(new Date(), place().tz)) ? null : civil; go('home'); }, 'link'));
+    btn('פתח במסך התפילה', () => { chosen = iso(civil) === iso(civilDate(new Date(), place().tz)) ? null : civil; go('home'); }, 'link'));
+  const navBtn = (n, key, label) => { const b = el('button', { type: 'button', className: 'skybtn', onclick: () => move(n), ariaLabel: label }); b.innerHTML = ICONS[key]; return b; };
+  const legend = (cls, text) => el('b', { style: `background:var(--${cls})`, textContent: text });
 
   $('calendar').replaceChildren(
     el('header', { className: 'hero' },
       el('div', { className: 'mhead' },
-        el('button', { type: 'button', className: 'mnav', onclick: () => move(-1), ariaLabel: 'החודש הקודם', textContent: '→' }),
-        el('div', {}, el('h1', { textContent: first.renderGematriya(true).split(' ').slice(1).join(' ') }), el('p', { className: 'sub', textContent: gregSpan })),
-        el('button', { type: 'button', className: 'mnav', onclick: () => move(1), ariaLabel: 'החודש הבא', textContent: '←' })),
-      el('div', { className: 'daynav' }, btn('היום', () => { calMonth = null; calSel = null; renderCalendar(); }, ''))),
-    grid,
-    el('div', { className: 'legend' },
-      el('span', { className: 'tag holiday', textContent: 'חג' }), el('span', { className: 'tag rc', textContent: 'ראש חודש' }),
-      el('span', { className: 'tag fast', textContent: 'צום' }), el('span', { className: 'tag modern', textContent: 'יום לאומי' }),
-      el('span', {}, el('i'), 'יום בלי תחנון')),
-    sec('היום שנבחר'), day,
-    sec('זמני היום'), timesCard(civil),
+        navBtn(-1, 'chevronRight', 'החודש הקודם'),
+        el('div', {}, el('h1', { className: 'gold', textContent: first.renderGematriya(true).split(' ').slice(1).join(' ') }), el('p', { className: 'sub', textContent: gregSpan })),
+        navBtn(1, 'chevron', 'החודש הבא')),
+      el('div', { className: 'mtoday' }, btn('היום', () => { calMonth = null; calSel = null; renderCalendar(); }, 'skypill'))),
+    el('div', { className: 'stack lift' },
+      el('section', { className: 'card calcard', ariaLabel: 'ימי החודש' }, grid,
+        el('div', { className: 'legend' }, legend('holiday', 'חג'), legend('rc', 'ראש חודש'), legend('fast', 'צום'), legend('modern', 'יום לאומי'),
+          el('span', {}, el('i'), 'בלי תחנון'))),
+      day,
+      timesCard(civil)),
   );
 }
 
@@ -471,8 +505,9 @@ function shareCard() {
     try { await navigator.clipboard.writeText(text); status.textContent = 'ההודעה הועתקה. אפשר להדביק אותה בוואטסאפ.'; return; } catch { /* no clipboard */ }
     open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
   };
-  return el('div', { className: 'card' }, el('b', { textContent: 'לשתף את האפליקציה' }),
-    el('p', { className: 'sub', textContent: 'שולח קישור והוראות התקנה בוואטסאפ, בהודעה או במייל.' }),
+  return el('section', { className: 'card' },
+    el('div', { className: 'grp-h' }, medal('share2'), el('h2', { textContent: 'לשתף את האפליקציה' })),
+    el('p', { className: 'sub', style: 'margin-top:0', textContent: 'שולח קישור והוראות התקנה בוואטסאפ, בהודעה או במייל.' }),
     el('div', { style: 'margin-top:10px' }, btn('שתף', share, 'btn primary'), ' ', status));
 }
 
@@ -482,7 +517,7 @@ function renderBrowse() {
   err.setAttribute('role', 'status');
   const input = el('input', { inputMode: 'text', placeholder: 'למשל 105', autocomplete: 'off' });
   input.setAttribute('aria-label', 'מספר עמוד');
-  const form = el('form', { className: 'jump' }, el('span', { textContent: 'מספר עמוד' }), input, el('button', { type: 'submit', className: 'btn primary', textContent: 'פתח' }));
+  const form = el('form', { className: 'jumpbox' }, el('span', { textContent: 'קפיצה לעמוד' }), input, el('button', { type: 'submit', className: 'btn primary', textContent: 'פתח' }), err);
   form.onsubmit = ev => {
     ev.preventDefault();
     const label = input.value.replace(/[\s'"״׳]/g, '');
@@ -492,12 +527,18 @@ function renderBrowse() {
     openRange('הסידור', Math.max(1, n - 5), Math.min(idx.pages.length, n + 30), n);
   };
   // Search: typing a word keeps only the parts whose name has it, and opens their groups.
-  const search = el('input', { type: 'search', className: 'search', placeholder: '🔍 חיפוש, למשל הבדלה', autocomplete: 'off' });
+  const search = el('input', { type: 'search', placeholder: 'חיפוש, למשל הבדלה', autocomplete: 'off' });
   search.setAttribute('aria-label', 'חיפוש בתוכן העניינים');
+  const searchBox = el('label', { className: 'searchbox' }, icon('search'), search);
   const none = el('p', { className: 'sub', hidden: true, textContent: 'לא נמצא. אפשר לנסות מילה אחרת, או לקפוץ למספר עמוד למטה.' });
+  const GROUP_ICON = { 'שחרית': 'shacharit', 'מנחה': 'mincha', 'ערבית': 'arvit', 'מוצאי שבת': 'candle', 'ראש חודש': 'moonStar', 'חנוכה ופורים': 'candle',
+    'מועדים': 'calendar', 'תעניות': 'clock', 'ימי תשובה': 'book', 'ברכות': 'cup', 'מעגל החיים': 'jug', 'לימוד': 'scroll', 'לוחות': 'calendar' };
   const groups = [...menu].map(([g, list]) => {
-    const d = el('details', { className: 'card' }, el('summary', { textContent: g }), el('ul', { className: 'list' }, list.map(e => { const li = menuItem(e); li.dataset.t = `${g} ${e.title}`; return li; })));
-    return d;
+    const chev = el('span', { className: 'chev' });
+    chev.innerHTML = ICONS.chevronDown;
+    return el('details', { className: 'card grp' },
+      el('summary', {}, medal(GROUP_ICON[g] ?? 'book'), el('span', { className: 't' }, el('b', { textContent: g }), el('small', { textContent: `${list.length} ${list.length === 1 ? 'חלק' : 'חלקים'}` })), chev),
+      el('ul', { className: 'list' }, list.map(e => { const li = menuItem(e); li.dataset.t = `${g} ${e.title}`; return li; })));
   });
   const norm = s => s.replace(/[֑-ׇ"'״׳]/g, '').replace(/\s+/g, ' ').trim();
   search.oninput = () => {
@@ -513,10 +554,8 @@ function renderBrowse() {
     none.hidden = !q || found > 0;
   };
   $('browse').replaceChildren(
-    el('header', { className: 'hero' }, el('h1', { textContent: 'תוכן העניינים' }), el('p', { className: 'sub', textContent: 'כל חלקי הסידור, לפי הסדר שבעמוד 3' })),
-    el('div', { className: 'card', style: 'margin-top:16px' }, search), none,
-    sec('חלקי הסידור'), ...groups,
-    sec('קפיצה לעמוד'), el('div', { className: 'card' }, form, err));
+    el('header', { className: 'hero' }, el('h1', { className: 'gold', textContent: 'תוכן העניינים' }), el('p', { className: 'sub', textContent: 'כל חלקי הסידור, לפי הסדר שבעמוד 3' })),
+    el('div', { className: 'stack lift', style: 'gap:12px' }, searchBox, none, ...groups, form));
 }
 
 // ---- settings
@@ -548,25 +587,24 @@ function renderSettings() {
   il.value = settings.il ? 'il' : 'abroad';
 
   const saved = el('span', { textContent: '' });
+  const box = (key, title, ...rows) => el('section', { className: 'card' }, el('div', { className: 'grp-h' }, medal(key), el('h2', { textContent: title })), ...rows);
   $('settings').replaceChildren(
-    el('header', { className: 'hero' }, el('h1', { textContent: 'הגדרות' }), el('p', { className: 'sub', textContent: 'נשמרות רק בטלפון הזה' })),
-    sec('מקום'),
-    el('div', { className: 'card' },
-      el('label', { className: 'set' }, el('span', {}, 'עיר או יישוב לזמני היום', el('small', { textContent: `עכשיו: ${place().name}` })), city),
-      el('div', { className: 'set' }, el('span', {}, 'מיקום מדויק', status), locate),
-      el('label', { className: 'set' }, el('span', {}, 'מקום מגורים', el('small', { textContent: 'ארץ ישראל או חוץ לארץ. משפיע על ימים טובים ועל שאלת גשמים' })), il)),
-    sec('בזמן התפילה'),
-    el('div', { className: 'card' },
-      check('keepAwake', 'מסך פעיל', 'המסך לא נכבה ולא ננעל כל עוד הסידור פתוח, כדי שלא יכבה באמצע התפילה'),
-      check('quiet', 'תזכורת למצב שקט', 'בפתיחת תפילה תופיע תזכורת להעביר את הטלפון למצב שקט'),
-      check('margins', 'הערות בשולי הדף', 'מקורות ופירושי מילים שמודפסים בצדי העמוד. כשכבוי, העמוד ממלא את המסך')),
-    sec('מנהג'),
-    el('div', { className: 'card' },
-      check('walled', 'עיר מוקפת חומה', 'פורים בט"ו (ירושלים)'),
-      check('adjacent', 'מנחה וערבית סמוכות', 'במנחה בלי תחנון ובלי עלינו, לפי עמוד 125')),
-    sec('שיתוף'), shareCard(),
-    el('p', { className: 'draft' }, 'הסידור נשמר בטלפון בפתיחה הראשונה (כ-13 מגה), ואחר כך עובד גם בלי אינטרנט. ', saved),
-    el('p', { className: 'draft', style: 'margin-top:6px', textContent: `גרסה ${__VERSION__}. סידור תפילת שלמה, נוסח תימן שאמי. המיקום וההגדרות נשארים בטלפון ואינם נשלחים. תמונות הרקע: כתב יד של רבי שלום שבזי (תכלאל, 1676) וכתב יד תימני של "מורה נבוכים", נחלת הכלל.` }));
+    el('header', { className: 'hero' }, el('h1', { className: 'gold', textContent: 'הגדרות' }), el('p', { className: 'sub', textContent: 'נשמרות רק בטלפון הזה' })),
+    el('div', { className: 'stack lift', style: 'gap:14px' },
+      box('pin', 'מקום',
+        el('label', { className: 'set' }, el('span', {}, 'עיר או יישוב', el('small', { textContent: 'לזמני היום ולצבעי השמיים' })), city),
+        el('div', { className: 'set' }, el('span', {}, 'מיקום מדויק', status), locate),
+        el('label', { className: 'set' }, el('span', {}, 'מקום מגורים', el('small', { textContent: 'ימים טובים ושאלת גשמים' })), il)),
+      box('phone', 'בזמן התפילה',
+        check('keepAwake', 'מסך פעיל', 'המסך לא נכבה בזמן התפילה'),
+        check('quiet', 'תזכורת למצב שקט', 'הודעה בפתיחת תפילה'),
+        check('margins', 'הערות בשולי הדף', 'מקורות ופירושי מילים בצדי העמוד')),
+      box('scroll', 'מנהג',
+        check('walled', 'עיר מוקפת חומה', 'פורים בט״ו (ירושלים)'),
+        check('adjacent', 'מנחה וערבית סמוכות', 'במנחה בלי תחנון ובלי עלינו, עמוד 125')),
+      shareCard(),
+      el('p', { className: 'draft' }, 'הסידור נשמר בטלפון בפתיחה הראשונה (כ-13 מגה), ואחר כך עובד גם בלי אינטרנט. ', saved),
+      el('p', { className: 'draft', textContent: `גרסה ${__VERSION__}. סידור תפילת שלמה, נוסח תימן שאמי. המיקום וההגדרות נשארים בטלפון ואינם נשלחים. תמונות הרקע: כתב יד של רבי שלום שבזי (תכלאל, 1676) וכתב יד תימני של "מורה נבוכים", נחלת הכלל.` })));
   const report = async () => {
     if (!saved.isConnected) return;
     // The whole app is saved once the background worker (sw.js) has finished installing.
@@ -584,6 +622,7 @@ function go(name, keepScroll = false) {
   for (const s of SCREENS) $(s).hidden = s !== name;
   $('nav').hidden = false;
   for (const b of $('nav').children) b.dataset.go === name ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
+  updateSky();
   ({ home: renderHome, calendar: renderCalendar, browse: renderBrowse, settings: renderSettings })[name]();
   if (!keepScroll) scrollTo(0, 0);
 }
@@ -625,4 +664,7 @@ go('home');
 setupUpdates();
 // Midnight and sunset pass while the app is open: refresh the home screen when the user comes back to it.
 document.addEventListener('visibilitychange', () => { if (!document.hidden && !readerOpen && tab === 'home') renderHome(); });
-setInterval(() => { if (!document.hidden && !readerOpen && tab === 'home') go('home', true); }, 60000);
+setInterval(() => { if (document.hidden) return; updateSky(); if (!readerOpen && tab === 'home') go('home', true); }, 60000);
+// For checking the look: ?sky=dawn|day|golden|evening|night shows that sky instead of the real one.
+const forcedSky = new URLSearchParams(location.search).get('sky');
+if (forcedSky) { updateSky = () => applySky(forcedSky); updateSky(); }
