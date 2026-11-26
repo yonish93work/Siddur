@@ -135,6 +135,7 @@ function renderHome() {
     isToday ? el('div', { className: 'card' }, el('b', { textContent: `זמנים: ${p.name}` }),
       el('ul', { className: 'list' }, [['עלות השחר', s.zmanim.alot], ['זריחה', s.zmanim.sunrise], ['חצות', s.zmanim.chatzot], ['מנחה גדולה', s.zmanim.minchaGedola], ['שקיעה', s.zmanim.sunset], ['צאת הכוכבים (8.5 מעלות)', s.zmanim.tzeit]]
         .map(([n, t]) => el('li', { className: 'plain' }, el('span', { textContent: n }), el('span', { className: 'pg', textContent: time(t) }))))) : '',
+    shareCard(),
     el('p', { className: 'draft', textContent: 'גרסת ניסיון: החוקים נכתבו לפי ההוראות שבסידור, ועדיין לא אומתו בידי בקיא במנהג. בכל ספק יש לנהוג לפי הסידור המודפס והרב.' }),
   );
 }
@@ -167,6 +168,31 @@ function extras(info) {
 }
 const menuItem = e => el('li', {}, el('button', { type: 'button', className: 'item', onclick: () => openRange(e.title, e.from, e.to) },
   el('span', { textContent: e.title }), el('span', { className: 'pg', textContent: idx.label(e.from) ? `עמ' ${idx.label(e.from)}` : '' })));
+
+// ---- sharing the app with others: the phone's own share list, or copying the message where there is none
+const SHARE_TEXT = url => `סידור תפילת שלמה (נוסח תימן שאמי), לפי היום בלוח העברי:
+${url}
+
+אנדרואיד: לפתוח ב-Chrome ← שלוש נקודות ← "התקנת אפליקציה" או "הוספה למסך הבית".
+אייפון: לפתוח ב-Safari ← כפתור השיתוף ← "הוספה למסך הבית".
+בפעם הראשונה צריך אינטרנט, אחר כך עובד גם בלי.`;
+
+function shareCard() {
+  const url = new URL('./', location.href).href;
+  const status = el('small');
+  status.setAttribute('role', 'status');
+  const share = async () => {
+    const text = SHARE_TEXT(url);
+    if (navigator.share) {
+      try { await navigator.share({ title: 'סידור תפילת שלמה', text }); return; } catch (e) { if (e?.name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(text); status.textContent = 'ההודעה הועתקה. אפשר להדביק אותה בוואטסאפ.'; return; } catch { /* no clipboard */ }
+    open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+  };
+  return el('div', { className: 'card' }, el('b', { textContent: 'לשתף את האפליקציה' }),
+    el('p', { className: 'sub', textContent: 'שולח קישור והוראות התקנה בוואטסאפ, בהודעה או במייל.' }),
+    btn('שתף', share, 'btn primary'), ' ', status);
+}
 
 // ---- table of contents
 function renderBrowse() {
@@ -216,6 +242,7 @@ function renderSettings() {
       check('walled', 'עיר מוקפת חומה', 'פורים בט"ו (ירושלים)'),
       check('adjacent', 'מנחה וערבית סמוכות', 'במנחה בלי תחנון ובלי עלינו, לפי עמוד 125')),
     el('div', { className: 'card' }, el('b', { textContent: 'שימוש בלי אינטרנט' }), el('p', { className: 'sub', textContent: 'הסידור נשמר בטלפון בפעם הראשונה (כ-13 מגה). אחר כך אפשר להתפלל גם בלי רשת.' }), saved),
+    shareCard(),
     el('p', { className: 'draft', textContent: `גרסה ${__VERSION__}. סידור תפילת שלמה, נוסח תימן שאמי. המיקום וההגדרות נשארים בטלפון ואינם נשלחים.` }));
   const report = async () => {
     if (!saved.isConnected) return;
