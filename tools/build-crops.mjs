@@ -54,7 +54,9 @@ function sideNotes(page, pw, ph) {
   }
   const touchesBig = b => big.some(c => c[0] < b[2] - 0.5 && c[2] > b[0] + 0.5 && c[1] < b[3] - 0.5 && c[3] > b[1] + 0.5);
   return merged
-    .filter(g => g[2] - g[0] >= 6 && g[2] - g[0] < 80 && g[3] - g[1] < 90 && g[2] >= 515 && gapToText(g) >= 12)
+    // Entirely in a margin (outside the text column, 72-523): always a note. Reaching into the column at its right
+    // edge: a note only if it stands apart from the text.
+    .filter(g => g[2] - g[0] >= 6 && g[2] - g[0] < 80 && g[3] - g[1] < 90 && (g[0] >= 526 || g[2] <= 69 || (g[2] >= 515 && gapToText(g) >= 12)))
     // Not part of a footnote: no other small print on the same line inside the text column.
     .filter(g => !groups.some(o => o[2] - o[0] >= 8 && o[1] < g[3] && o[3] > g[1] && (o[2] < g[0] - 0.5 || o[0] > g[2] + 0.5) && o[2] > 80 && o[0] < 515))
     .map(g => [g[0] - 1.5, g[1] - 1.5, g[2] + 1.5, g[3] + 1.5].map((v, k) => Math.round(Math.min(Math.max(v, 0), k % 2 ? ph : pw) * 10) / 10))
