@@ -2,7 +2,7 @@
 // The reading screen is in reader.js; the rules are in logic/.
 import { HDate } from '@hebcal/core';
 import { dayInfo } from './logic/calendar.js';
-import { PRAYERS, reminders, dayTitles } from './logic/prayers.js';
+import { PRAYERS, reminders, dayTitles, omittedPages } from './logic/prayers.js';
 import { HIGHLIGHTS } from './logic/highlights.js';
 import { ANCHORS } from './logic/anchors.js';
 import { ICONS, STAR } from './icons.js';
@@ -23,7 +23,7 @@ const SCREENS = ['home', 'calendar', 'browse', 'settings'];
 
 // ---- settings, kept on the phone only
 // special = { date: 'YYYY-MM-DD', kind: 'avel' | 'chatan' | 'brit' }: a one-day change to the prayers (p. 68).
-const DEFAULTS = { il: true, walled: false, adjacent: false, place: null, night: false, special: null, installHidden: false, keepAwake: true, quiet: false, margins: false };
+const DEFAULTS = { il: true, walled: false, adjacent: false, place: null, night: false, special: null, installHidden: false, keepAwake: true, quiet: false, margins: false, sayColor: 'yellow', notToday: 'hide', pageSound: true };
 const SPECIAL = { avel: 'בית האבל', chatan: 'חתן בבית הכנסת', brit: 'ברית מילה' };
 const settings = { ...DEFAULTS };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('settings') ?? '{}')); } catch { /* storage blocked: defaults */ }
@@ -73,8 +73,9 @@ function infoFor(prayer, civil) {
 
 function prayerPlan(prayer, civil) {
   const d = prayerDate(prayer, civil), info = infoFor(prayer, civil);
+  const omit = omittedPages(prayer, info).map(l => idx.first(l));
   const segments = PRAYERS[prayer].build(info, { adjacent: settings.adjacent })
-    .map(s => ({ ...s, pages: idx.range(s.from, s.to) })).filter(s => s.pages.length);
+    .map(s => ({ ...s, pages: idx.range(s.from, s.to).filter(n => !omit.includes(n)) })).filter(s => s.pages.length);
   const notes = new Map(), marks = new Map(), skips = new Map(), general = [];
   const paint = (map, list) => {
     for (const m of list) {
@@ -86,7 +87,7 @@ function prayerPlan(prayer, civil) {
   for (const r of reminders(prayer, info)) {
     if (!r.page) { general.push(r.text); continue; }
     const n = idx.first(r.page);
-    notes.set(n, [...(notes.get(n) ?? []), r.text]);
+    if (r.text) notes.set(n, [...(notes.get(n) ?? []), r.text]);
     paint(marks, r.marks);
     paint(skips, r.skips ?? []);
   }
@@ -111,7 +112,7 @@ function show(plan, startAt, resume) {
   for (const s of SCREENS) $(s).hidden = true;
   $('nav').hidden = true;
   openReader(plan, {
-    idx, crops, startAt, onError: showError, night: settings.night, keepAwake: settings.keepAwake, margins: settings.margins,
+    idx, crops, startAt, onError: showError, night: settings.night, keepAwake: settings.keepAwake, margins: settings.margins, sayColor: settings.sayColor, notToday: settings.notToday, pageSound: settings.pageSound,
     toast: settings.quiet && resume?.kind === 'prayer' ? '🔕 כדאי להעביר את הטלפון למצב שקט' : '',
     onNight: on => { settings.night = on; save(); },
     onMove: n => saveResume({ ...resume, n, label: idx.label(n), at: Date.now() }),
@@ -418,6 +419,12 @@ async function openCompass() {
 }
 const menuItem = e => el('li', {}, el('button', { type: 'button', className: 'item', onclick: () => openRange(e.title, e.from, e.to) },
   el('span', { textContent: e.title }), el('span', { className: 'pg', textContent: idx.label(e.from) ? `עמ׳ ${idx.label(e.from)}` : '' })));
+// The places inside a section (למנצח, אשרי, עמידה...): open the section at that place.
+const ANCHOR_PAGES = ANCHORS.map(([l, name]) => [idx.first(l), name]);
+const SECTION_TITLES = new Set([...menu.values()].flat().map(e => e.title));
+const subItems = e => ANCHOR_PAGES.filter(([n, name]) => n >= e.from && n <= e.to && !SECTION_TITLES.has(name))
+  .map(([n, name]) => el('li', { className: 'sub' }, el('button', { type: 'button', className: 'item', onclick: () => openRange(e.title, e.from, e.to, n) },
+    el('span', { textContent: name }), el('span', { className: 'pg', textContent: `עמ׳ ${idx.label(n)}` }))));
 
 // ---- Hebrew calendar
 let calMonth = null, calSel = null; // calMonth = HDate of the 1st of the month shown; calSel = absolute day picked
@@ -538,7 +545,7 @@ function renderBrowse() {
     chev.innerHTML = ICONS.chevronDown;
     return el('details', { className: 'card grp' },
       el('summary', {}, medal(GROUP_ICON[g] ?? 'book'), el('span', { className: 't' }, el('b', { textContent: g }), el('small', { textContent: `${list.length} ${list.length === 1 ? 'חלק' : 'חלקים'}` })), chev),
-      el('ul', { className: 'list' }, list.map(e => { const li = menuItem(e); li.dataset.t = `${g} ${e.title}`; return li; })));
+      el('ul', { className: 'list jumps' }, list.flatMap(e => [menuItem(e), ...subItems(e)].map((li, k, all) => { li.dataset.t = `${g} ${e.title} ${li.textContent}`; return li; }))));
   });
   const norm = s => s.replace(/[֑-ׇ"'״׳]/g, '').replace(/\s+/g, ' ').trim();
   search.oninput = () => {
@@ -563,6 +570,11 @@ function renderSettings() {
   const check = (key, title, sub) => {
     const input = el('input', { type: 'checkbox', checked: settings[key], onchange: e => { settings[key] = e.target.checked; save(); } });
     return el('label', { className: 'set' }, el('span', {}, title, el('small', { textContent: sub })), input);
+  };
+  const choose = (key, title, sub, options) => {
+    const sel = el('select', { onchange: e => { settings[key] = e.target.value; save(); } }, options.map(([v, t]) => el('option', { value: v, textContent: t })));
+    sel.value = settings[key];
+    return el('label', { className: 'set' }, el('span', {}, title, el('small', { textContent: sub })), sel);
   };
   const status = el('small');
   const byName = (a, b) => a[1].name.localeCompare(b[1].name, 'he');
@@ -598,6 +610,12 @@ function renderSettings() {
       box('phone', 'בזמן התפילה',
         check('keepAwake', 'מסך פעיל', 'המסך לא נכבה בזמן התפילה'),
         check('quiet', 'תזכורת למצב שקט', 'הודעה בפתיחת תפילה'),
+        check('pageSound', 'צליל בהעברת דף', 'רחש עדין של דף נהפך')),
+      box('book', 'תצוגת הסידור',
+        choose('sayColor', 'סימון מה שאומרים היום', 'למשל "משיב הרוח" או "ברך עלינו"',
+          [['yellow', 'צהוב'], ['green', 'ירוק'], ['blue', 'כחול'], ['pink', 'ורוד'], ['none', 'בלי צבע']]),
+        choose('notToday', 'מה שלא אומרים היום', 'למשל "מוריד הטל" בחורף, או שיר של יום אחר',
+          [['hide', 'מוסתר'], ['grey', 'באפור'], ['show', 'מוצג כרגיל']]),
         check('margins', 'הערות בשולי הדף', 'מקורות ופירושי מילים בצדי העמוד')),
       box('scroll', 'מנהג',
         check('walled', 'עיר מוקפת חומה', 'פורים בט״ו (ירושלים)'),

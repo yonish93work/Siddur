@@ -298,7 +298,34 @@ export function reminders(prayer, i) {
     if (i.chanukah) add(null, `חנוכה, נר ${i.chanukah}: הדלקת נרות בעמוד 365`);
     if (i.megillah) add(null, 'קריאת המגילה: עמוד 387');
   }
+  hideTheRest(prayer, i, out);
   return out;
+}
+
+// Additions printed in the prayer but not said today (זכרנו outside the Ten Days, עננו on a day that is not a fast,
+// יעלה ויבוא on an ordinary day...): listed as "skips" without a text, so the reader can hide them (settings).
+// Pairs that always have one side said (tal/geshem, barech/barchenu) and the lines inside יעלה ויבוא are already
+// handled above; על הניסים is handled here as a whole.
+const PAIRED = new Set(['tal', 'geshem', 'barech', 'barchenu', 'yaanecha', 'tefilaLeDavid', 'yaaleRoshChodesh', 'yaalePesach', 'yaaleSukkot']);
+function hideTheRest(prayer, i, out) {
+  const H = HIGHLIGHTS[prayer] ?? {};
+  const used = new Set(out.flatMap(r => [...r.marks, ...r.skips]));
+  const keys = Object.keys(H).filter(k => !PAIRED.has(k) && !k.startsWith('nissim') && !k.startsWith('psalm') && !used.has(k));
+  if (!i.chanukah && !i.purim) keys.push(...['nissimGeneral', 'nissimChanukah', 'nissimPurim'].filter(k => H[k] && !omittedPages(prayer, i).includes(H[k][0])));
+  // The psalms of the other weekdays, on the pages of today's psalm (p. 87, today's pages, and p. 90 for הושיענו).
+  if (prayer === 'shacharit' && i.weekday <= 5) {
+    const PDF = { 87: '@97', 88: '@98', 89: '@99', 90: '@100' };
+    const shown = new Set(['87', ...DAY_PSALM[i.weekday], '90'].map(p => PDF[p]));
+    keys.push(...Object.keys(H).filter(k => /^psalm\d/.test(k) && k[5] !== String(i.weekday) && shown.has(H[k][0])));
+  }
+  for (const k of keys) out.push({ page: H[k][0], text: '', marks: [], skips: [k] });
+}
+
+// Whole pages left out of the prayer today: the page of על הניסים in Shacharit and Mincha (p. 64, p. 119) is
+// only for Chanukah and Purim. (In Arvit it shares its pages with other text, so it is hidden instead.)
+export function omittedPages(prayer, i) {
+  const page = HIGHLIGHTS[prayer]?.nissimGeneral?.[0];
+  return page && !i.chanukah && !i.purim ? [page] : [];
 }
 
 export function omerText(n) {

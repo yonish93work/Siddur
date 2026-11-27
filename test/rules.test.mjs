@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { HDate, HebrewCalendar, months as m, flags } from '@hebcal/core';
 import * as c from '../app/logic/calendar.js';
-import { PRAYERS, reminders, omerText } from '../app/logic/prayers.js';
+import { PRAYERS, reminders, omerText, omittedPages } from '../app/logic/prayers.js';
 import { PARSHIOT } from '../app/logic/parshiot.js';
 import { pageIndex } from '../app/logic/pages.js';
 
@@ -161,6 +161,7 @@ test('every segment and reminder points at real pages, for 20 years', () => {
         assert.ok(r.length > 0 && r.length < 70, `${i.d} ${p} ${s.title} ${s.from}-${s.to}: ${r.length}`);
         r.forEach(n => pages.add(n));
       }
+      for (const l of omittedPages(p, i)) pages.delete(idx.first(l));
       for (const r of reminders(p, i)) if (r.page) {
         assert.ok(idx.first(r.page), `no page ${r.page}`);
         assert.ok(pages.has(idx.first(r.page)), `${i.d} ${p}: reminder on page ${r.page} (${r.text}) is not in the sequence`);

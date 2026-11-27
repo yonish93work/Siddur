@@ -27,7 +27,9 @@ export function loadPdf(onProgress) {
   return pdfPromise;
 }
 
-const SAY = 'rgba(255, 214, 0, 0.42)', SKIP = 'rgba(120, 120, 120, 0.30)';
+// Colours for what is said today (settings: "צבע הסימון"); null = no colour.
+export const SAY_COLORS = { yellow: 'rgba(255, 214, 0, 0.42)', green: 'rgba(70, 200, 110, 0.36)', blue: 'rgba(70, 150, 255, 0.30)', pink: 'rgba(255, 110, 170, 0.30)', none: null };
+const SKIP = 'rgba(120, 120, 120, 0.30)';
 const ZOOM = 2.2;
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -117,6 +119,7 @@ async function show(i, dir, focus) {
       if (!focus) { host.scrollTop = 0; host.scrollLeft = 0; }
     }
     if (old) {
+      if (dir && s.pageSound) rustle();
       if (dir && s.zoom === 1 && !reduceMotion()) await turn(old, spread, dir);
       old.remove();
     }
@@ -149,7 +152,7 @@ function fit(list) {
 
 async function drawPage(e, size) {
   const s = state;
-  const key = `${e.n}:${size.w}:${e.first ? 1 : 0}:${s.margins ? 1 : 0}`;
+  const key = `${e.n}:${size.w}:${e.first ? 1 : 0}`;
   if (s.cache.has(key)) {
     const job = s.cache.get(key);
     s.cache.delete(key); s.cache.set(key, job); // most recently used goes last
@@ -167,13 +170,20 @@ async function drawPage(e, size) {
     canvas.height = Math.round((b - t) * scale);
     const ctx = canvas.getContext('2d', { alpha: false });
     await page.render({ canvasContext: ctx, viewport: page.getViewport({ scale, offsetX: -l * scale, offsetY: -t * scale }) }).promise;
-    if (e.first) {
-      ctx.globalCompositeOperation = 'multiply';
-      for (const [map, color] of [[s.plan.skips, SKIP], [s.plan.marks, SAY]]) {
-        ctx.fillStyle = color;
-        for (const [x0, y0, x1, y1] of map?.get(e.n) ?? []) ctx.fillRect((x0 - l) * scale, (y0 - t) * scale, (x1 - x0) * scale, (y1 - y0) * scale);
-      }
+    const fill = (boxes, color, mode) => {
+      if (!color) return;
+      ctx.globalCompositeOperation = mode;
+      ctx.fillStyle = color;
+      for (const [x0, y0, x1, y1] of boxes ?? []) ctx.fillRect((x0 - l) * scale, (y0 - t) * scale, (x1 - x0) * scale, (y1 - y0) * scale);
       ctx.globalCompositeOperation = 'source-over';
+    };
+    // Side notes that sit inside the text column are covered in the page colour (setting: "הערות בשולי הדף").
+    if (!s.margins) fill(s.crops[e.n - 1][6], '#fff', 'source-over');
+    if (e.first) {
+      // What is not said today: hidden in the page colour (the default), grey, or left as printed.
+      const hide = s.notToday ?? 'hide';
+      fill(s.plan.skips?.get(e.n), hide === 'hide' ? '#fff' : hide === 'grey' ? SKIP : null, hide === 'hide' ? 'source-over' : 'multiply');
+      fill(s.plan.marks?.get(e.n), SAY_COLORS[s.sayColor ?? 'yellow'], 'multiply');
     }
     return canvas;
   })();
@@ -196,6 +206,7 @@ function clone(src) {
 // The page-turn: the page lifts at its free edge and folds over the spine (on the right, in a Hebrew book).
 function turn(oldSpread, newSpread, dir) {
   const two = newSpread.children.length > 1;
+  if (two && oldSpread.children.length > 1) return turnBook(oldSpread, newSpread, dir);
   return new Promise(resolve => {
     let leaf;
     if (dir > 0) {
@@ -224,6 +235,57 @@ function turn(oldSpread, newSpread, dir) {
     setTimeout(done, 900);
   });
 }
+// Two pages side by side (phone or tablet lying sideways): turned like a real book, around the spine in the middle.
+// Forward, the left page lifts and turns over to the right; its back is the new right page. Back, the right page
+// turns over to the left; its back is the new left page. Until it lands, the page it will cover stays in view.
+function turnBook(oldSpread, newSpread, dir) {
+  return new Promise(resolve => {
+    const fwd = dir > 0;
+    const lifting = fwd ? oldSpread.lastElementChild : oldSpread.firstElementChild; // left page / right page
+    const landing = fwd ? newSpread.firstElementChild : newSpread.lastElementChild; // new right page / new left page
+    const staying = fwd ? oldSpread.firstElementChild : oldSpread.lastElementChild; // the old page under the landing spot
+    const covered = fwd ? newSpread.firstElementChild : newSpread.lastElementChild;
+    const host = $('r-pages');
+    const face = (src, back) => { const f = src.cloneNode(true); copyCanvas(src, f); f.classList.add('face'); if (back) f.classList.add('back'); Object.assign(f.style, { width: '100%', height: '100%', margin: 0 }); return f; };
+    const under = face(staying, false);
+    under.classList.remove('face');
+    place(under, covered);
+    under.style.zIndex = 2;
+    const leaf = document.createElement('div');
+    leaf.className = `book-leaf ${fwd ? 'fwd' : 'back'}`;
+    place(leaf, lifting);
+    leaf.append(face(lifting, false), face(landing, true));
+    oldSpread.remove();
+    host.append(under, leaf);
+    const done = () => { under.remove(); leaf.remove(); resolve(); };
+    leaf.addEventListener('animationend', done, { once: true });
+    setTimeout(done, 1100);
+  });
+}
+
+// A soft paper rustle, made on the spot (no sound file): a short burst of noise, shaped like a page sliding.
+let audio = null;
+function rustle() {
+  try {
+    audio ??= new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === 'suspended') audio.resume();
+    const t = audio.currentTime, len = 0.42, rate = audio.sampleRate;
+    const buf = audio.createBuffer(1, Math.floor(rate * len), rate), data = buf.getChannelData(0);
+    for (let k = 0; k < data.length; k++) {
+      const x = k / data.length;
+      // two swishes: the page lifting, then landing; brown-ish noise so it is not harsh
+      const env = Math.exp(-((x - 0.18) ** 2) / 0.006) * 0.8 + Math.exp(-((x - 0.62) ** 2) / 0.02) * 0.55;
+      data[k] = (Math.random() * 2 - 1) * env;
+    }
+    const src = audio.createBufferSource(); src.buffer = buf;
+    const band = audio.createBiquadFilter(); band.type = 'bandpass'; band.Q.value = 0.7;
+    band.frequency.setValueAtTime(1800, t); band.frequency.linearRampToValueAtTime(3600, t + len * 0.5); band.frequency.linearRampToValueAtTime(1400, t + len);
+    const gain = audio.createGain(); gain.gain.value = 0.22;
+    src.connect(band).connect(gain).connect(audio.destination);
+    src.start(t);
+  } catch { /* no sound on this phone: the page still turns */ }
+}
+
 function copyCanvas(from, to) {
   const a = from.querySelector('canvas'), b = to.querySelector('canvas');
   if (a && b) { b.width = a.width; b.height = a.height; b.getContext('2d').drawImage(a, 0, 0); }
@@ -296,7 +358,10 @@ function fillPanel() {
   if (rows.length) {
     p.append(el('h2', { textContent: 'מה אומרים היום' }));
     p.append(el('ul', { className: 'list card' }, ...rows.map(a => el('li', { className: 'plain' }, el('span', { className: 'say', textContent: a.t }), a.n ? pg(a.n) : null))));
-    p.append(el('p', { className: 'sub', textContent: 'צהוב: אומרים היום. אפור: לא אומרים היום.' }));
+    const say = { yellow: 'בצהוב', green: 'בירוק', blue: 'בכחול', pink: 'בוורוד' }[state.sayColor ?? 'yellow'];
+    const not = { hide: 'מה שלא אומרים היום מוסתר', grey: 'מה שלא אומרים היום באפור', show: '' }[state.notToday ?? 'hide'];
+    const legend = [say && `מה שאומרים היום מסומן ${say}`, not].filter(Boolean).join('. ');
+    if (legend) p.append(el('p', { className: 'sub', textContent: `${legend}. אפשר לשנות בהגדרות.` }));
   }
   if (state.onReport) {
     p.append(el('h2', { textContent: 'מצאת טעות?' }));

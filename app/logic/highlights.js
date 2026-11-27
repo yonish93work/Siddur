@@ -13,7 +13,7 @@ const NISSIM = (pdf, chanukahBottom, end) => ({
 
 export const HIGHLIGHTS = {
   shacharit: {
-    zochrenu: ['@56', [FULL(278, 304)]], michamocha: ['@56', [FULL(693, 721)]],
+    zochrenu: ['@56', [FULL(278, 330)]], michamocha: ['@56', [FULL(693, 721)]],
     tal: ['@56', [[184, 444, 332, 482]]], geshem: ['@56', [[70, 482, 332, 514]]],
     kadosh: ['@57', [[72, 498, 340, 521]]], aneinuChazan: ['@58', [FULL(340, 598)]],
     barech: ['@59', BARECH.winter], barchenu: ['@59', BARECH.summer],
@@ -21,12 +21,19 @@ export const HIGHLIGHTS = {
     yaale: ['@63', [FULL(375, 772)]],
     yaaleRoshChodesh: ['@63', [[90, 555, 510, 588]]], yaalePesach: ['@63', [[90, 585, 510, 617]]], yaaleSukkot: ['@63', [[90, 613, 510, 646]]],
     ...prefix(NISSIM(65, 644, 790)),
-    ketov: ['@66', [[140, 136, 456, 161]]], sefer: ['@67', [FULL(274, 295)]],
+    ketov: ['@66', [[140, 136, 456, 161]]], sefer: ['@67', [FULL(274, 316)]],
     // Skipped on days without Tachanun (pp. 82, 86)
     yaanecha: ['@92', [FULL(497, 795)]], tefilaLeDavid: ['@96', [FULL(68, 530)]],
+    // The psalm of each weekday, pp. 87-90 (0 = Sunday), from its heading to its "הושיענו" line. Measured 2026-11-27.
+    psalm0: ['@97', [FULL(278, 621)]],
+    psalm1a: ['@97', [FULL(623, 800)]], psalm1b: ['@98', [FULL(70, 313)]],
+    psalm2: ['@98', [FULL(316, 580)]],
+    psalm3a: ['@98', [FULL(590, 800)]], psalm3b: ['@99', [FULL(70, 461)]],
+    psalm4a: ['@99', [FULL(466, 795)]], psalm4b: ['@100', [FULL(70, 222)]],
+    psalm5: ['@100', [FULL(228, 442)]],
   },
   mincha: {
-    zochrenu: ['@121', [FULL(280, 307)]], michamocha: ['@121', [FULL(695, 723)]],
+    zochrenu: ['@121', [FULL(280, 332)]], michamocha: ['@121', [FULL(695, 723)]],
     tal: ['@121', [[183, 452, 322, 483]]], geshem: ['@121', [[70, 484, 325, 515]]],
     kadosh: ['@122', [[72, 489, 340, 512]]], aneinuChazan: ['@123', [FULL(326, 584)]],
     barech: ['@124', BARECH.winter], barchenu: ['@124', BARECH.summer],
@@ -34,10 +41,10 @@ export const HIGHLIGHTS = {
     yaale: ['@128', [FULL(375, 772)]],
     yaaleRoshChodesh: ['@128', [[90, 555, 510, 588]]], yaalePesach: ['@128', [[90, 585, 510, 617]]], yaaleSukkot: ['@128', [[90, 613, 510, 646]]],
     ...prefix(NISSIM(130, 638, 780)),
-    kohanim: ['@131', [FULL(292, 556)]], ketov: ['@131', [[133, 139, 462, 165]]], sefer: ['@132', [FULL(70, 91)]],
+    kohanim: ['@131', [FULL(292, 556)]], ketov: ['@131', [[133, 139, 462, 165]]], sefer: ['@132', [FULL(70, 112)]],
   },
   arvit: {
-    zochrenu: ['@150', [FULL(660, 685)]], michamocha: ['@151', [[96, 307, 499, 332]]],
+    zochrenu: ['@150', [FULL(660, 709)]], michamocha: ['@151', [[96, 307, 499, 332]]],
     tal: ['@151', [[185, 108, 337, 138]]], geshem: ['@151', [[76, 138, 343, 168]]],
     kadosh: ['@151', [[188, 495, 383, 523]]], havdala: ['@151', [FULL(586, 772)]],
     barech: ['@153', BARECH.winter], barchenu: ['@153', BARECH.summer],
@@ -45,7 +52,7 @@ export const HIGHLIGHTS = {
     yaale: ['@156', [FULL(358, 762)]],
     yaaleRoshChodesh: ['@156', [[90, 538, 510, 571]]], yaalePesach: ['@156', [[90, 567, 510, 600]]], yaaleSukkot: ['@156', [[90, 595, 510, 628]]],
     nissimPurim: ['@157', [FULL(472, 792)]], nissimChanukah: ['@158', [FULL(70, 512)]],
-    ketov: ['@158', [[142, 620, 454, 645]]], sefer: ['@159', [FULL(289, 311)]],
+    ketov: ['@158', [[142, 620, 454, 645]]], sefer: ['@159', [FULL(289, 331)]],
   },
 };
 
